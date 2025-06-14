@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Home IoT - WebXR Experience</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.3.1/dist/aframe-environment-component.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            max-width: 320px;
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .device-info {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #00ff88;
+            transition: all 0.3s ease;
+        }
+
+        .device-info:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .status-online { color: #4CAF50; font-weight: bold; }
+        .status-offline { color: #f44336; font-weight: bold; }
+        .status-warning { color: #ff9800; font-weight: bold; }
+        
+        #ml-insights {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 100, 200, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            max-width: 280px;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        #controls-help {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(34, 34, 34, 0.9);
+            color: #00ff88;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .metric-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00cc70);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        h3, h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-overlay">
+        <h3>🏠 Smart Home Dashboard</h3>
+        <div id="device-list"></div>
+        <div style="margin-top: 15px;">
+            <strong>Edge Computing Status:</strong>
+            <div id="edge-status" class="status-online pulse">✅ Active</div>
+        </div>
+        <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            Total Devices: <span id="device-count">0</span><br>
+            Data Processed: <span id="data-count">0</span> packets
+        </div>
+    </div>
+
+    <div id="controls-help">
+        <strong>🎮 Controls:</strong><br>
+        WASD - Move around<br>
+        Mouse - Look around<br>
+        Click - Interact with devices<br>
+        Enter VR - Immersive mode
+    </div>
+    
+    <div id="ml-insights">
+        <h4>🧠 Edge ML Insights</h4>
+        <div id="ml-predictions"></div>
+        <div style="margin-top: 15px;">
+            <div>Processing Load:</div>
+            <div class="metric-bar">
+                <div id="processing-bar" class="metric-fill" style="width: 65%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <a-scene 
+        vr-mode-ui="enabled: true" 
+        device-orientation-permission-ui="enabled: true"
+        background="color: #1a1a2e"
+        fog="type: linear; color: #1a1a2e; near: 10; far: 50"
+        stats
+        embedded
+        style="height: 100vh; width: 100vw;">
+        
+        <a-assets>
+            <!-- Your 3D Model -->
+            <a-asset-item id="box-model" src="box.glb"></a-asset-item>
+            
+            <!-- Textures -->
+            <img id="floor-texture" src="data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='grid' width='10' height='10' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 10 0 L 0 0 0 10' fill='none' stroke='%23333' stroke-width='1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='%23222'/%3E%3Crect width='100' height='100' fill='url(%23grid)'/%3E%3C/svg%3E" crossorigin="anonymous">
+            <img id="wall-texture" src="data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100' height='100' fill='%23444'/%3E%3Cpath d='M0,20 L100,20 M0,40 L100,40 M0,60 L100,60 M0,80 L100,80' stroke='%23555' stroke-width='1'/%3E%3C/svg%3E" crossorigin="anonymous">
+            
+            <!-- Sounds -->
+            <audio id="click-sound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2u2wdBDWO1fPN2SoFJmfD8OGVQAoUXrTq66hVFApCnt/2u2wdBDKI0/LPeCkHL3nH7+CQPwkXXL7r6aZUFAxCnt/2u2wdBDKI0/LPeCkFL3nH7+CQPwkZWrTl66VTFAxMo+H1vWobBT+M1PLN2ScEK3PF8N9/QAkZWrTl66VTFAxMo+H1vWobBT+M1PLN2ScEK3PF8N9/QAkIAAAAAA==" preload="auto"></audio>
+        </a-assets>
+
+        <!-- Lighting System -->
+        <a-light type="ambient" intensity="0.3" color="#6640FF"></a-light>
+        <a-light type="directional" position="10 20 10" intensity="0.5" color="#FFFFFF" castShadow="true"></a-light>
+        <a-light type="point" position="0 8 0" intensity="1" color="#00ff88" distance="20"></a-light>
+
+        <!-- Environment -->
+        <!-- Floor with futuristic design -->
+        <a-plane 
+            id="floor"
+            position="0 0 0" 
+            rotation="-90 0 0" 
+            width="30" 
+            height="30" 
+            material="src: #floor-texture; repeat: 6 6; metalness: 0.8; roughness: 0.2"
+            shadow="receive: true">
+        </a-plane>
+        
+        <!-- Walls with tech aesthetics -->
+        <a-plane 
+            position="0 7 -15" 
+            width="30" 
+            height="14" 
+            material="src: #wall-texture; repeat: 6 3; color: #2a2a4a; metalness: 0.5"
+            shadow="receive: true">
+        </a-plane>
+        <a-plane 
+            position="-15 7 0" 
+            rotation="0 90 0" 
+            width="30" 
+            height="14" 
+            material="src: #wall-texture; repeat: 6 3; color: #2a2a4a; metalness: 0.5"
+            shadow="receive: true">
+        </a-plane>
+        <a-plane 
+            position="15 7 0" 
+            rotation="0 -90 0" 
+            width="30" 
+            height="14" 
+            material="src: #wall-texture; repeat: 6 3; color: #2a2a4a; metalness: 0.5"
+            shadow="receive: true">
+        </a-plane>
+
+        <!-- YOUR CUSTOM IoT BOX - CENTER STAGE -->
+        <a-gltf-model 
+            id="custom-box-device"
+            src="#box-model"
+            position="0 2 -5"
+            scale="2 2 2"
+            rotation="0 0 0"
+            iot-device="type: custom-box; status: online"
+            class="interactive"
+            animation="property: rotation; to: 0 360 0; dur: 12000; loop: true"
+            shadow="cast: true">
+        </a-gltf-model>
+        
+        <!-- Holographic info display for your box -->
+        <a-plane 
+            position="0 4 -3"
+            width="3" 
+            height="1.5"
+            material="color: #000033; opacity: 0.8; shader: flat"
+            text="value: 📦 CUSTOM IoT BOX\n🔄 Status: Processing\n🧠 AI: Learning\n📡 Sensors: Multi-modal; color: #00ff88; align: center; width: 10; font: dejavu"
+            look-at="#camera"
+            animation="property: material.opacity; to: 0.6; dur: 2000; loop: true; dir: alternate">
+        </a-plane>
+
+        <!-- Smart Living Room Setup -->
+        <!-- Smart TV Wall -->
+        <a-box 
+            id="smart-tv"
+            position="-10 4 -14"
+            width="8" 
+            height="4" 
+            depth="0.3"
+            material="color: #111; metalness: 0.9; roughness: 0.1"
+            iot-device="type: tv; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-box>
+        <a-plane 
+            position="-10 4 -13.8"
+            width="7.5" 
+            height="3.5"
+            material="color: #001122; shader: flat"
+            animation="property: material.color; to: #003366; dur: 3000; loop: true; dir: alternate">
+            <a-text 
+                position="0 0 0.01"
+                value="📺 SMART TV\nStreaming: 4K\nAI Recommendations"
+                color="#00ff88"
+                align="center"
+                width="8">
+            </a-text>
+        </a-plane>
+
+        <!-- Smart Kitchen Area -->
+        <!-- Smart Refrigerator -->
+        <a-box 
+            id="smart-fridge"
+            position="12 5 -12"
+            width="3" 
+            height="10" 
+            depth="2.5"
+            material="color: #E8E8E8; metalness: 0.8; roughness: 0.2"
+            iot-device="type: refrigerator; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-box>
+        <a-plane 
+            position="10.2 5 -12"
+            width="2" 
+            height="1.5"
+            material="color: #000; opacity: 0.9"
+            text="value: ❄️ SMART FRIDGE\nTemp: 4°C\nItems: 89%\nExpiry Alerts: 2; color: #00ff88; align: center; width: 12">
+        </a-plane>
+
+        <!-- Smart Oven -->
+        <a-box 
+            id="smart-oven"
+            position="12 3 -8"
+            width="3" 
+            height="2.5" 
+            depth="2.5"
+            material="color: #333; metalness: 0.9; roughness: 0.1"
+            iot-device="type: oven; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-box>
+        <a-sphere 
+            position="10.2 3 -8"
+            radius="0.3"
+            material="color: #ff4444; emissive: #ff4444; emissiveIntensity: 0.7"
+            text="value: 🔥 180°C; color: white; align: center; width: 20; position: 0 -0.5 0">
+        </a-sphere>
+
+        <!-- Advanced Smart Lighting System -->
+        <a-sphere 
+            id="smart-light-1"
+            position="-6 10 -8"
+            radius="0.5"
+            material="color: #FFFF99; emissive: #FFFF99; emissiveIntensity: 0.8; metalness: 0.3"
+            iot-device="type: light; status: online"
+            class="interactive"
+            animation="property: material.emissiveIntensity; to: 0.3; dur: 2000; loop: true; dir: alternate">
+            <a-light type="point" intensity="2" distance="15" color="#FFFF99"></a-light>
+        </a-sphere>
+        
+        <a-sphere 
+            id="smart-light-2"
+            position="6 10 -8"
+            radius="0.5"
+            material="color: #99FFFF; emissive: #99FFFF; emissiveIntensity: 0.8; metalness: 0.3"
+            iot-device="type: light; status: online"
+            class="interactive"
+            animation="property: material.emissiveIntensity; to: 0.3; dur: 3000; loop: true; dir: alternate">
+            <a-light type="point" intensity="2" distance="15" color="#99FFFF"></a-light>
+        </a-sphere>
+
+        <a-sphere 
+            id="smart-light-3"
+            position="0 10 -12"
+            radius="0.5"
+            material="color: #FF99FF; emissive: #FF99FF; emissiveIntensity: 0.8; metalness: 0.3"
+            iot-device="type: light; status: online"
+            class="interactive"
+            animation="property: material.emissiveIntensity; to: 0.3; dur: 4000; loop: true; dir: alternate">
+            <a-light type="point" intensity="2" distance="15" color="#FF99FF"></a-light>
+        </a-sphere>
+
+        <!-- Security System -->
+        <!-- Smart Security Camera -->
+        <a-cylinder 
+            id="security-camera"
+            position="13 12 -13"
+            radius="0.3" 
+            height="0.8"
+            material="color: #222; metalness: 0.9; roughness: 0.1"
+            iot-device="type: camera; status: online"
+            class="interactive"
+            rotation="0 -45 0"
+            animation="property: rotation; to: 0 45 0; dur: 8000; loop: true; dir: alternate"
+            shadow="cast: true">
+        </a-cylinder>
+        <a-sphere 
+            position="13 12.5 -13"
+            radius="0.15"
+            material="color: #ff0000; emissive: #ff0000; emissiveIntensity: 1"
+            animation="property: material.emissiveIntensity; to: 0.3; dur: 1000; loop: true; dir: alternate">
+        </a-sphere>
+
+        <!-- Smart Thermostat -->
+        <a-cylinder 
+            id="smart-thermostat"
+            position="0 5 -14.5"
+            radius="0.8" 
+            height="0.2"
+            material="color: #FFF; metalness: 0.5; roughness: 0.2"
+            iot-device="type: thermostat; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-cylinder>
+        <a-plane 
+            position="0 5 -14.3"
+            width="1.4" 
+            height="1.4"
+            material="color: #000; opacity: 0.9"
+            text="value: 🌡️ 22°C\n💨 68% Humidity\n🏠 Heat Mode\n⚡ Eco Active; color: #00ff88; align: center; width: 12">
+        </a-plane>
+
+        <!-- Motion Sensors -->
+        <a-box 
+            id="motion-sensor-1"
+            position="3 9 -14"
+            width="0.4" 
+            height="0.4" 
+            depth="0.4"
+            material="color: #FFF; metalness: 0.8"
+            iot-device="type: motion; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-box>
+        <a-sphere 
+            position="3 9.3 -14"
+            radius="0.08"
+            material="color: #00ff00; emissive: #00ff00; emissiveIntensity: 1"
+            animation="property: material.emissiveIntensity; to: 0.2; dur: 1500; loop: true; dir: alternate">
+        </a-sphere>
+
+        <a-box 
+            id="motion-sensor-2"
+            position="-3 9 -14"
+            width="0.4" 
+            height="0.4" 
+            depth="0.4"
+            material="color: #FFF; metalness: 0.8"
+            iot-device="type: motion; status: online"
+            class="interactive"
+            shadow="cast: true">
+        </a-box>
+        <a-sphere 
+            position="-3 9.3 -14"
+            radius="0.08"
+            material="color: #00ff00; emissive: #00ff00; emissiveIntensity: 1"
+            animation="property: material.emissiveIntensity; to: 0.2; dur: 1800; loop: true; dir: alternate">
+        </a-sphere>
+
+        <!-- Central Smart Home Hub -->
+        <a-cylinder 
+            id="smart-hub"
+            position="0 2 -1"
+            radius="1.2" 
+            height="0.5"
+            material="color: #4169E1; metalness: 0.9; roughness: 0.1; emissive: #4169E1; emissiveIntensity: 0.3"
+            iot-device="type: hub; status: online"
+            class="interactive"
+            animation="property: rotation; to: 0 360 0; dur: 15000; loop: true"
+            shadow="cast: true">
+        </a-cylinder>
+        <a-ring 
+            position="0 2.3 -1"
+            radius-inner="1" 
+            radius-outer="1.8"
+            material="color: #00BFFF; opacity: 0.6; side: double"
+            animation="property: rotation; to: 0 -360 0; dur: 10000; loop: true"
+            animation__pulse="property: material.opacity; to: 0.2; dur: 2000; loop: true; dir: alternate">
+        </a-ring>
+
+        <!-- Information Displays -->
+        <a-plane 
+            id="main-info-panel"
+            position="0 3.5 2"
+            width="4" 
+            height="2.5"
+            material="color: #000022; opacity: 0.9; shader: flat"
+            text="value: 🚀 SMART HOME CONTROL CENTER\n\n🎯 Touch devices to interact\n🧠 Edge ML: Active Processing\n📱 Devices: 9 Online\n⚡ Data Processing: Local Edge\n🔒 Security: Protected\n\n🥽 Enter VR for full immersion; color: #00ff88; align: center; width: 8"
+            look-at="#camera"
+            animation="property: position; to: 0 3.8 2; dur: 3000; loop: true; dir: alternate">
+        </a-plane>
+
+        <!-- Particle Effects -->
+        <a-entity 
+            id="data-particles"
+            position="0 5 -5"
+            particle-system="preset: dust; particleCount: 100; color: #00ff88, #0088ff; size: 0.5; maxAge: 3">
+        </a-entity>
+
+        <!-- Player Setup -->
+        <a-entity 
+            id="rig" 
+            movement-controls="fly: false; constrainToNavMesh: false"
+            position="0 0 8">
+            <a-entity 
+                id="camera"
+                camera 
+                look-controls="pointerLockEnabled: true"
+                wasd-controls="acceleration: 25; easing: 15"
+                position="0 1.6 0">
+                
+                <!-- VR Hand Controllers -->
+                <a-entity 
+                    id="rightHand"
+                    hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc"
+                    raycaster="objects: .interactive; far: 15; lineColor: #00ff88; lineOpacity: 0.8"
+                    laser-controls="hand: right">
+                </a-entity>
+                
+                <a-entity 
+                    id="leftHand"
+                    hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
+                    raycaster="objects: .interactive; far: 15; lineColor: #00ff88; lineOpacity: 0.8"
+                    laser-controls="hand: left">
+                </a-entity>
+                
+                <!-- Cursor for desktop interaction -->
+                <a-cursor
+                    id="cursor"
+                    raycaster="objects: .interactive; far: 15"
+                    material="color: #00ff88; shader: flat"
+                    animation__click="property: scale; startEvents: click; from: 1 1 1; to: 1.5 1.5 1.5; dur: 150; easing: easeInCubic"
+                    animation__clickreset="property: scale; startEvents: animationcomplete__click; to: 1 1 1; dur: 150; easing: easeOutCubic">
+                </a-cursor>
+            </a-entity>
+        </a-entity>
+
+        <!-- Atmospheric Sky -->
+        <a-sky 
+            material="color: #1a1a2e; shader: gradient; topColor: #2E3440; bottomColor: #1a1a2e"
+            animation="property: material.topColor; to: #4C566A; dur: 10000; loop: true; dir: alternate">
+        </a-sky>
+    </a-scene>
+
+    <script>
+        // Enhanced IoT Device Management System
+        class IoTDevice {
+            constructor(id, type, status = 'online') {
+                this.id = id;
+                this.type = type;
+                this.status = status;
+                this.data = {};
+                this.lastUpdate = Date.now();
+                this.sensors = [];
+                this.interactions = 0;
+                this.energyUsage = Math.random() * 100;
+            }
+
+            updateStatus(status) {
+                this.status = status;
+                this.lastUpdate = Date.now();
+            }
+
+            addSensor(sensorType, value) {
+                this.sensors.push({ 
+                    type: sensorType, 
+                    value, 
+                    timestamp: Date.now(),
+                    quality: Math.random() * 0.3 + 0.7 // 70-100% quality
+                });
+                
+                // Keep only last 10 readings per sensor
+                if (this.sensors.length > 100) {
+                    this.sensors = this.sensors.slice(-100);
+                }
+            }
+
+            getSensorData(sensorType) {
+                return this.sensors.filter(s => s.type === sensorType);
+            }
+
+            interact() {
+                this.interactions++;
+                this.lastUpdate = Date.now();
+            }
+        }
+
+        // Advanced Edge Computing Simulator
+        class EdgeComputingNode {
+            constructor() {
+                this.devices = new Map();
+                this.mlModel = new EdgeMLModel();
+                this.dataBuffer = [];
+                this.processingQueue = [];
+                this.totalDataProcessed = 0;
+                this.systemLoad = 0;
+            }
+
+            registerDevice(device) {
+                this.devices.set(device.id, device);
+                console.log(`🔗 Device ${device.id} (${device.type}) registered to edge node`);
+                this.updateDeviceCount();
+            }
+
+            processData(deviceId, data) {
+                const device = this.devices.get(deviceId);
+                if (device) {
+                    // Simulate edge processing latency
+                    setTimeout(() => {
+                        const processedData = this.mlModel.predict(data, device);
+                        this.dataBuffer.push({
+                            deviceId,
+                            originalData: data,
+                            processedData,
+                            timestamp: Date.now(),
+                            processingTime: Math.random() * 50 + 10 // 10-60ms
+                        });
+                        
+                        this.totalDataProcessed++;
+                        this.updateSystemMetrics();
+                        this.updateDeviceUI(deviceId, processedData);
+                    }, Math.random() * 100 + 50);
+                }
+            }
+
+            updateSystemMetrics() {
+                // Update system load
+                this.systemLoad = Math.min(this.devices.size * 0.1 + Math.random() * 0.3, 1);
+                
+                // Update processing bar
+                const processingBar = document.getElementById('processing-bar');
+                if (processingBar) {
+                    processingBar.style.width = `${this.systemLoad * 100}%`;
+                }
+
+                // Update data counter
+                const dataCount = document.getElementById('data-count');
+                if (dataCount) {
+                    dataCount.textContent = this.totalDataProcessed;
+                }
+            }
+
+            updateDeviceCount() {
+                const deviceCount = document.getElementById('device-count');
+                if (deviceCount) {
+                    deviceCount.textContent = this.devices.size;
+                }
+            }
+
+            updateDeviceUI(deviceId, data) {
+                const deviceList = document.getElementById('device-list');
+                const deviceDiv = document.getElementById(`device-${deviceId}`) || document.createElement('div');
+                deviceDiv.id = `device-${deviceId}`;
+                deviceDiv.className = 'device-info';
+                
+                const device = this.devices.get(deviceId);
+                const statusClass = device.status === 'online' ? 'status-online' : 
+                                   device.status === 'warning' ? 'status-warning' : 'status-offline';
+                
+                const emoji = this.getDeviceEmoji(device.type);
+                
+                deviceDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>${emoji} ${device.type.toUpperCase()}</strong>
+                        <span class="${statusClass}">${device.status}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #ccc; margin-top: 3px;">
+                        Interactions: ${device.interactions} | Energy: ${device.energyUsage.toFixed(1)}W
+                    </div>
+                    <div style="font-size: 10px; color: #888;">
+                        ${new Date(device.lastUpdate).toLocaleTimeString()}
+                    </div>
+                `;
+                
+                if (!document.getElementById(`device-${deviceId}`)) {
+                    deviceList.appendChild(deviceDiv);
+                }
+            }
+
+            getDeviceEmoji(type) {
+                const emojiMap = {
+                    'custom-box': '📦',
+                    'tv': '📺',
+                    'refrigerator': '❄️',
+                    'oven': '🔥',
+                    'light': '💡',
+                    'camera': '📹',
+                    'thermostat': '🌡️',
+                    'motion': '👁️',
+                    'hub': '🌐',
+                    'generic': '🔌'
+                };
+                return emojiMap[type] || '🔌';
+            }
+        }
+
+        // Enhanced Edge Machine Learning Model
+        class EdgeMLModel {
+            constructor() {
+                this.patterns = {
+                    lighting: { optimal: 0.7, current: 0.5, trend: 'stable' },
+                    temperature: { optimal: 22, current: 20, trend: 'rising' },
+                    security: { riskLevel: 0.1, incidents: 0, trend: 'stable' },
+                    energy: { efficiency: 0.85, consumption: 0, trend: 'decreasing' },
+                    comfort: { level: 0.8, factors: ['temperature', 'lighting', 'air_quality'] },
+                    occupancy: { detected: true, count: 2, confidence: 0.95 }
+                };
+                this.learningRate = 0.01;
+                this.predictionAccuracy = 0.92;
+            }
+
+            predict(data, device) {
+                // Simulate advanced ML predictions with device context
+                const predictions = {
+                    energyOptimization: this.calculateEnergyOptimization(data, device),
+                    comfortLevel: this.calculateComfortLevel(data, device),
+                    securityRisk: this.calculateSecurityRisk(data, device),
+                    maintenanceNeeded: this.predictMaintenance(data, device),
+                    anomalyDetection: this.detectAnomalies(data, device),
+                    behaviorPrediction: this.predictUserBehavior(data, device)
+                };
+
+                // Simulate learning and adaptation
+                this.adaptModel(data, device, predictions);
+                
+                // Update ML insights UI
+                this.updateMLInsights(predictions);
+                
+                return predictions;
+            }
+
+            calculateEnergyOptimization(data, device) {
+                let efficiency = 0.7 + Math.random() * 0.3;
+                
+                // Device-specific optimizations
+                if (device.type === 'light') {
+                    efficiency += 0.1; // Smart lighting is efficient
+                }
+                if (device.type === 'custom-box') {
+                    efficiency += 0.15; // Your custom device is very efficient
+                }
+                
+                return Math.min(efficiency, 1.0);
+            }
+
+            calculateComfortLevel(data, device) {
+                let comfort = 0.6 + Math.random() * 0.4;
+                
+                // Environmental factors
+                if (device.type === 'thermostat') {
+                    comfort += 0.1;
+                }
+                if (device.type === 'light') {
+                    comfort += 0.05;
+                }
+                
+                return Math.min(comfort, 1.0);
+            }
+
+            calculateSecurityRisk(data, device) {
+                let risk = Math.random() * 0.3;
+                
+                // Security devices reduce overall risk
+                if (device.type === 'camera' || device.type === 'motion') {
+                    risk *= 0.5;
+                }
+                
+                return risk;
+            }
+
+            predictMaintenance(data, device) {
+                // Simulate predictive maintenance
+                const usageIntensity = device.interactions / (Date.now() - device.lastUpdate + 1);
+                return usageIntensity > 0.001 && Math.random() < 0.05;
+            }
+
+            detectAnomalies(data, device) {
+                return {
+                    detected: Math.random() < 0.02,
+                    severity: Math.random() < 0.5 ? 'low' : 'medium',
+                    confidence: 0.8 + Math.random() * 0.2
+                };
+            }
+
+            predictUserBehavior(data, device) {
+                return {
+                    nextInteraction: Date.now() + (Math.random() * 3600000), // Next hour
+                    preferredSettings: {
+                        temperature: 21 + Math.random() * 3,
+                        lighting: 0.6 + Math.random() * 0.4,
+                        security: 'high'
+                    },
+                    confidence: 0.75 + Math.random() * 0.25
+                };
+            }
+
+            adaptModel(data, device, predictions) {
+                // Simulate model learning and adaptation
+                this.predictionAccuracy = Math.min(
+                    this.predictionAccuracy + this.learningRate * Math.random() * 0.1,
+                    0.98
+                );
+            }
+
+            updateMLInsights(predictions) {
+                const mlDiv = document.getElementById('ml-predictions');
+                if (mlDiv) {
+                    mlDiv.innerHTML = `
+                        <div style="margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>⚡ Energy Efficiency:</span>
+                                <strong>${(predictions.energyOptimization * 100).toFixed(1)}%</strong>
+                            </div>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: ${predictions.energyOptimization * 100}%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>🏠 Comfort Level:</span>
+                                <strong>${(predictions.comfortLevel * 100).toFixed(1)}%</strong>
+                            </div>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: ${predictions.comfortLevel * 100}%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>🔒 Security Risk:</span>
+                                <strong style="color: ${predictions.securityRisk > 0.3 ? '#ff6b6b' : '#4ecdc4'}">${(predictions.securityRisk * 100).toFixed(1)}%</strong>
+                            </div>
+                            <div class="metric-bar">
+                                <div class="metric-fill" style="width: ${predictions.securityRisk * 100}%; background: ${predictions.securityRisk > 0.3 ? '#ff6b6b' : '#4ecdc4'};"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 12px; color: #ccc; margin-top: 10px;">
+                            🔧 Maintenance: ${predictions.maintenanceNeeded ? '<span style="color: #ffa726;">Scheduled</span>' : '<span style="color: #4ecdc4;">OK</span>'}<br>
+                            🎯 ML Accuracy: ${(this.predictionAccuracy * 100).toFixed(1)}%<br>
+                            🔍 Anomalies: ${predictions.anomalyDetection.detected ? '<span style="color: #ff6b6b;">Detected</span>' : '<span style="color: #4ecdc4;">None</span>'}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Initialize Enhanced Edge Computing System
+        const edgeNode = new EdgeComputingNode();
+        let systemStartTime = Date.now();
+
+        // Enhanced A-Frame IoT Device Component
+        AFRAME.registerComponent('iot-device', {
+            schema: {
+                type: { type: 'string', default: 'generic' },
+                status: { type: 'string', default: 'online' }
+            },
+
+            init: function() {
+                const device = new IoTDevice(
+                    this.el.id,
+                    this.data.type,
+                    this.data.status
+                );
+                
+                edgeNode.registerDevice(device);
+                
+                // Enhanced click interaction
+                this.el.addEventListener('click', (e) => {
+                    this.handleInteraction(device);
+                });
+
+                // Enhanced hover effects
+                this.el.addEventListener('mouseenter', (e) => {
+                    this.el.setAttribute('scale', '1.1 1.1 1.1');
+                    this.showHoverEffect();
+                });
+
+                this.el.addEventListener('mouseleave', (e) => {
+                    this.el.setAttribute('scale', '1 1 1');
+                });
+
+                // VR controller interactions
+                this.el.addEventListener('raycaster-intersected', (e) => {
+                    this.el.setAttribute('scale', '1.05 1.05 1.05');
+                });
+
+                this.el.addEventListener('raycaster-intersected-cleared', (e) => {
+                    this.el.setAttribute('scale', '1 1 1');
+                });
+
+                // Start enhanced sensor data simulation
+                this.startAdvancedDataSimulation(device);
+            },
+
+            handleInteraction: function(device) {
+                // Play interaction sound
+                const sound = document.getElementById('click-sound');
+                if (sound) sound.play();
+
+                // Record interaction
+                device.interact();
+
+                // Generate rich interaction data
+                const interactionData = {
+                    action: 'user_interaction',
+                    timestamp: Date.now(),
+                    userEngagement: Math.random(),
+                    interactionType: 'click',
+                    deviceState: device.status,
+                    environmentalContext: {
+                        timeOfDay: new Date().getHours(),
+                        dayOfWeek: new Date().getDay(),
+                        season: this.getCurrentSeason()
+                    }
+                };
+
+                // Process through edge computing
+                edgeNode.processData(device.id, interactionData);
+
+                // Enhanced visual feedback
+                this.showAdvancedInteractionFeedback();
+                
+                // Device-specific interaction effects
+                this.handleDeviceSpecificInteraction(device);
+            },
+
+            handleDeviceSpecificInteraction: function(device) {
+                switch(device.type) {
+                    case 'light':
+                        this.toggleLighting();
+                        break;
+                    case 'custom-box':
+                        this.activateCustomBoxFeatures();
+                        break;
+                    case 'tv':
+                        this.cycleChannels();
+                        break;
+                    case 'thermostat':
+                        this.adjustTemperature();
+                        break;
+                    default:
+                        this.genericInteraction();
+                }
+            },
+
+            activateCustomBoxFeatures: function() {
+                // Special effects for your custom box
+                const boxElement = this.el;
+                
+                // Create energy pulse effect
+                const pulse = document.createElement('a-ring');
+                pulse.setAttribute('position', boxElement.getAttribute('position'));
+                pulse.setAttribute('radius-inner', '0.1');
+                pulse.setAttribute('radius-outer', '3');
+                pulse.setAttribute('material', 'color: #00ff88; opacity: 0.8; side: double');
+                pulse.setAttribute('animation', 'property: scale; to: 3 3 3; dur: 2000; easing: easeOutQuart');
+                pulse.setAttribute('animation__fade', 'property: material.opacity; to: 0; dur: 2000');
+                
+                boxElement.sceneEl.appendChild(pulse);
+                
+                // Rotate faster temporarily
+                boxElement.setAttribute('animation', 'property: rotation; to: 0 720 0; dur: 3000; loop: 1');
+                
+                setTimeout(() => {
+                    pulse.remove();
+                    // Reset to normal rotation
+                    boxElement.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 12000; loop: true');
+                }, 2000);
+            },
+
+            toggleLighting: function() {
+                const currentColor = this.el.getAttribute('material').color;
+                const colors = ['#FFFF99', '#99FFFF', '#FF99FF', '#99FF99', '#FF9999'];
+                const newColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                this.el.setAttribute('material', 'color', newColor);
+                this.el.setAttribute('material', 'emissive', newColor);
+                
+                // Update point light if exists
+                const light = this.el.querySelector('a-light');
+                if (light) {
+                    light.setAttribute('light', 'color', newColor);
+                }
+            },
+
+            cycleChannels: function() {
+                const screen = this.el.querySelector('a-plane');
+                if (screen) {
+                    const channels = ['#001122', '#003366', '#112233', '#334455'];
+                    const newChannel = channels[Math.floor(Math.random() * channels.length)];
+                    screen.setAttribute('material', 'color', newChannel);
+                }
+            },
+
+            adjustTemperature: function() {
+                const tempDisplay = this.el.nextElementSibling;
+                if (tempDisplay && tempDisplay.tagName === 'A-PLANE') {
+                    const newTemp = 18 + Math.floor(Math.random() * 8);
+                    const newHumidity = 40 + Math.floor(Math.random() * 30);
+                    tempDisplay.setAttribute('text', 'value', `🌡️ ${newTemp}°C\n💨 ${newHumidity}% Humidity\n🏠 Auto Mode\n⚡ Optimizing`);
+                }
+            },
+
+            genericInteraction: function() {
+                // Generic pulse effect
+                this.showInteractionFeedback();
+            },
+
+            showAdvancedInteractionFeedback: function() {
+                const position = this.el.getAttribute('position');
+                
+                // Create multiple feedback elements
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const feedback = document.createElement('a-sphere');
+                        feedback.setAttribute('position', `${position.x + (Math.random() - 0.5) * 2} ${position.y + 1 + i} ${position.z + (Math.random() - 0.5) * 2}`);
+                        feedback.setAttribute('radius', '0.1');
+                        feedback.setAttribute('material', `color: #00ff88; opacity: 0.8; emissive: #00ff88; emissiveIntensity: 0.5`);
+                        feedback.setAttribute('animation', 'property: scale; to: 2 2 2; dur: 1500; easing: easeOutQuart');
+                        feedback.setAttribute('animation__fade', 'property: material.opacity; to: 0; dur: 1500');
+                        feedback.setAttribute('animation__float', 'property: position; to: ' + position.x + ' ' + (position.y + 3) + ' ' + position.z + '; dur: 1500; easing: easeOutQuart');
+                        
+                        this.el.sceneEl.appendChild(feedback);
+                        
+                        setTimeout(() => {
+                            feedback.remove();
+                        }, 1500);
+                    }, i * 200);
+                }
+            },
+
+            showHoverEffect: function() {
+                // Create hover glow effect
+                const glow = document.createElement('a-ring');
+                const position = this.el.getAttribute('position');
+                
+                glow.setAttribute('position', position);
+                glow.setAttribute('radius-inner', '0.8');
+                glow.setAttribute('radius-outer', '1.5');
+                glow.setAttribute('material', 'color: #00ff88; opacity: 0.3; side: double');
+                glow.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 3000; loop: true');
+                glow.id = 'hover-glow-' + this.el.id;
+                
+                this.el.sceneEl.appendChild(glow);
+                
+                // Remove glow after short time
+                setTimeout(() => {
+                    const existingGlow = document.getElementById('hover-glow-' + this.el.id);
+                    if (existingGlow) existingGlow.remove();
+                }, 1000);
+            },
+
+            showInteractionFeedback: function() {
+                const feedback = document.createElement('a-sphere');
+                feedback.setAttribute('position', this.el.getAttribute('position'));
+                feedback.setAttribute('radius', '0.1');
+                feedback.setAttribute('material', 'color: #00ff88; opacity: 0.8');
+                feedback.setAttribute('animation', 'property: scale; to: 3 3 3; dur: 1000');
+                feedback.setAttribute('animation__fade', 'property: material.opacity; to: 0; dur: 1000');
+                
+                this.el.sceneEl.appendChild(feedback);
+                
+                setTimeout(() => {
+                    feedback.remove();
+                }, 1000);
+            },
+
+            getCurrentSeason: function() {
+                const month = new Date().getMonth();
+                if (month >= 2 && month <= 4) return 'spring';
+                if (month >= 5 && month <= 7) return 'summer';
+                if (month >= 8 && month <= 10) return 'fall';
+                return 'winter';
+            },
+
+            startAdvancedDataSimulation: function(device) {
+                setInterval(() => {
+                    // Generate realistic sensor data based on device type
+                    let sensorData = this.generateSensorData(device);
+                    
+                    // Add some realistic environmental factors
+                    sensorData.environmental = {
+                        timestamp: Date.now(),
+                        uptime: Date.now() - systemStartTime,
+                        systemLoad: Math.random() * 0.3 + 0.4,
+                        networkLatency: Math.random() * 50 + 10
+                    };
+
+                    // Process through edge computing
+                    edgeNode.processData(device.id, sensorData);
+                    
+                }, 1500 + Math.random() * 1000); // Vary update intervals
+            },
+
+            generateSensorData: function(device) {
+                switch(device.type) {
+                    case 'custom-box':
+                        return {
+                            accelerometer: {
+                                x: (Math.random() - 0.5) * 2,
+                                y: (Math.random() - 0.5) * 2,
+                                z: (Math.random() - 0.5) * 2
+                            },
+                            gyroscope: {
+                                pitch: Math.random() * 360,
+                                roll: Math.random() * 360,
+                                yaw: Math.random() * 360
+                            },
+                            magnetometer: Math.random() * 100,
+                            proximity: Math.random() * 50,
+                            ambientLight: Math.random() * 1000,
+                            temperature: 18 + Math.random() * 10,
+                            humidity: 40 + Math.random() * 30,
+                            pressure: 1000 + Math.random() * 50,
+                            batteryLevel: 75 + Math.random() * 25,
+                            wifiSignal: -30 - Math.random() * 40,
+                            bluetoothDevices: Math.floor(Math.random() * 5),
+                            cpuUsage: Math.random() * 80,
+                            memoryUsage: Math.random() * 90,
+                            storageUsage: Math.random() * 70,
+                            edgeProcessing: true,
+                            mlInference: Math.random() * 100,
+                            dataQuality: 0.8 + Math.random() * 0.2
+                        };
+                    
+                    case 'thermostat':
+                        return {
+                            temperature: 20 + Math.random() * 5,
+                            targetTemperature: 22,
+                            humidity: 40 + Math.random() * 20,
+                            setpoint: 22,
+                            mode: ['heat', 'cool', 'auto'][Math.floor(Math.random() * 3)],
+                            fanSpeed: Math.random() * 100,
+                            energyUsage: Math.random() * 50
+                        };
+                    
+                    case 'light':
+                        return {
+                            brightness: Math.random() * 100,
+                            color: Math.random() * 360,
+                            temperature: 2700 + Math.random() * 3000,
+                            energyUsage: Math.random() * 10,
+                            lifespan: 80 + Math.random() * 20,
+                            flickerRate: Math.random() * 0.1
+                        };
+                    
+                    case 'motion':
+                        return {
+                            motionDetected: Math.random() < 0.3,
+                            confidence: 0.7 + Math.random() * 0.3,
+                            sensitivity: 0.7,
+                            batteryLevel: 80 + Math.random() * 20,
+                            coverage: Math.random() * 100,
+                            falsePositives: Math.random() * 5
+                        };
+                    
+                    case 'camera':
+                        return {
+                            recording: true,
+                            resolution: ['720p', '1080p', '4K'][Math.floor(Math.random() * 3)],
+                            frameRate: 30 + Math.random() * 30,
+                            nightVision: Math.random() < 0.7,
+                            motionAlerts: Math.random() < 0.1,
+                            storageUsed: Math.random() * 100,
+                            faceDetection: Math.random() < 0.4
+                        };
+                    
+                    case 'tv':
+                        return {
+                            volume: Math.random() * 100,
+                            channel: Math.floor(Math.random() * 200),
+                            resolution: '4K',
+                            brightness: Math.random() * 100,
+                            contrast: Math.random() * 100,
+                            viewingTime: Math.random() * 8,
+                            contentType: ['movie', 'news', 'sports', 'series'][Math.floor(Math.random() * 4)]
+                        };
+                    
+                    case 'refrigerator':
+                        return {
+                            temperature: 2 + Math.random() * 4,
+                            freezerTemp: -18 + Math.random() * 3,
+                            humidity: 60 + Math.random() * 20,
+                            doorStatus: Math.random() < 0.1 ? 'open' : 'closed',
+                            energyUsage: Math.random() * 150,
+                            filterStatus: 80 + Math.random() * 20,
+                            inventoryLevel: Math.random() * 100
+                        };
+                    
+                    case 'oven':
+                        return {
+                            temperature: Math.random() < 0.3 ? 180 + Math.random() * 100 : 0,
+                            targetTemp: 180,
+                            mode: ['bake', 'broil', 'roast', 'off'][Math.floor(Math.random() * 4)],
+                            timer: Math.random() * 60,
+                            energyUsage: Math.random() * 200,
+                            doorStatus: Math.random() < 0.1 ? 'open' : 'closed'
+                        };
+                    
+                    case 'hub':
+                        return {
+                            connectedDevices: edgeNode.devices.size,
+                            networkStatus: 'optimal',
+                            dataProcessed: edgeNode.totalDataProcessed,
+                            systemLoad: edgeNode.systemLoad,
+                            uptime: Date.now() - systemStartTime,
+                            memoryUsage: Math.random() * 80,
+                            processingQueue: Math.random() * 10
+                        };
+                    
+                    default:
+                        return {
+                            status: 'active',
+                            uptime: Date.now() - device.lastUpdate,
+                            genericSensor: Math.random() * 100
+                        };
+                }
+            }
+        });
+
+        // Enhanced System Monitoring
+        function updateSystemStatus() {
+            const edgeStatus = document.getElementById('edge-status');
+            const processingLoad = edgeNode.systemLoad;
+            
+            if (processingLoad > 0.8) {
+                edgeStatus.textContent = '⚠️ High Load';
+                edgeStatus.className = 'status-warning pulse';
+            } else if (processingLoad > 0.6) {
+                edgeStatus.textContent = '🔄 Processing';
+                edgeStatus.className = 'status-online';
+            } else {
+                edgeStatus.textContent = '✅ Active';
+                edgeStatus.className = 'status-online pulse';
+            }
+        }
+
+        // Scene Initialization and Event Handling
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Smart Home IoT WebXR Experience Initialized');
+            console.log('📦 Your custom box.glb model should be loading...');
+            
+            // Start system monitoring
+            setInterval(updateSystemStatus, 2000);
+            
+            // Add error handling for model loading
+            const scene = document.querySelector('a-scene');
+            scene.addEventListener('loaded', () => {
+                console.log('✅ Scene loaded successfully');
+                setTimeout(() => {
+                    console.log('🎮 Controls: WASD to move, Mouse to look, Click devices to interact');
+                    console.log('🥽 Press Enter VR button for immersive experience');
+                }, 1000);
+            });
+            
+            // Handle model loading errors
+            const customBox = document.getElementById('custom-box-device');
+            customBox.addEventListener('model-error', (e) => {
+                console.warn('⚠️ Could not load box.glb - make sure the file is in the same folder');
+                console.log('💡 The experience will work without the model, but your custom box won\'t appear');
+            });
+        });
+
+        // Add keyboard shortcuts for testing
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'r':
+                    // Reset all devices
+                    edgeNode.devices.forEach(device => {
+                        device.interactions = 0;
+                        device.energyUsage = Math.random() * 100;
+                    });
+                    console.log('🔄 System reset');
+                    break;
+                case 't':
+                    // Test mode - rapid interactions
+                    edgeNode.devices.forEach(device => {
+                        for(let i = 0; i < 5; i++) {
+                            setTimeout(() => {
+                                edgeNode.processData(device.id, { test: true, rapid: i });
+                            }, i * 100);
+                        }
+                    });
+                    console.log('🧪 Test mode activated');
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
