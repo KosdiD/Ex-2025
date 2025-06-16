@@ -146,6 +146,13 @@
             <button onclick="resetPosition()">↩️ На початок</button>
             <button onclick="toggleMarkers()">👁️ Показати/Сховати</button>
         </div>
+
+        <div class="control-group">
+            <strong>💾 Експорт/Імпорт:</strong><br>
+            <button onclick="exportMarkers()">📥 Експортувати маркери</button>
+            <button onclick="document.getElementById('import-file').click()">📤 Імпортувати маркери</button>
+            <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importMarkers(event)">
+        </div>
     </div>
 
     <!-- Інформація про позицію -->
@@ -224,6 +231,7 @@
         let markersVisible = true;
         let tempMarkerPosition = null;
         let markerCounter = 1;
+        let deviceData = {};
 
         // IoT пристрої за замовчуванням
         const defaultDevices = {
@@ -234,6 +242,9 @@
                 position: {x: 0, y: 0, z: 0}
             }
         };
+        
+        // Копіюємо дефолтні пристрої в робочі дані
+        deviceData = {...defaultDevices};
 
         // Функції керування висотою
         function changeHeight(direction) {
@@ -299,7 +310,7 @@
             document.querySelector('a-scene').appendChild(container);
             
             // Зберігаємо дані про пристрій
-            defaultDevices[markerId] = {
+            deviceData[markerId] = {
                 name: name,
                 type: 'IoT Пристрій',
                 description: description,
@@ -326,7 +337,7 @@
 
         // Відображення інформації про IoT
         function showIotInfo(markerId) {
-            const device = defaultDevices[markerId];
+            const device = deviceData[markerId];
             if (device) {
                 document.getElementById('iot-title').textContent = device.name;
                 document.getElementById('iot-type').textContent = device.type;
@@ -338,6 +349,103 @@
 
         function closeIotPanel() {
             document.getElementById('iot-info-panel').classList.remove('active');
+        }
+
+        // Експорт маркерів
+        function exportMarkers() {
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                devices: deviceData,
+                markerCounter: markerCounter
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `smart-home-iot-markers-${Date.now()}.json`;
+            link.click();
+            
+            console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів');
+        }
+
+        // Імпорт маркерів
+        function importMarkers(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    // Видаляємо всі існуючі маркери (крім дефолтних)
+                    Object.keys(deviceData).forEach(markerId => {
+                        if (!defaultDevices[markerId]) {
+                            const element = document.getElementById(markerId);
+                            if (element) element.remove();
+                        }
+                    });
+                    
+                    // Завантажуємо нові дані
+                    deviceData = {...importData.devices};
+                    markerCounter = importData.markerCounter || Object.keys(deviceData).length;
+                    
+                    // Створюємо маркери зі збережених даних
+                    Object.entries(deviceData).forEach(([markerId, device]) => {
+                        if (!defaultDevices[markerId]) {
+                            createMarkerFromData(markerId, device);
+                        }
+                    });
+                    
+                    console.log('✅ Імпортовано', Object.keys(deviceData).length, 'маркерів');
+                    alert('Маркери успішно імпортовано!');
+                    
+                } catch (error) {
+                    console.error('❌ Помилка імпорту:', error);
+                    alert('Помилка при імпорті файлу. Перевірте формат файлу.');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Очищаємо input для можливості повторного вибору того ж файлу
+            event.target.value = '';
+        }
+
+        // Створення маркера з даних
+        function createMarkerFromData(markerId, device) {
+            const container = document.createElement('a-entity');
+            container.setAttribute('id', markerId);
+            container.setAttribute('position', `${device.position.x} ${device.position.y} ${device.position.z}`);
+            
+            // Сфера маркера
+            const marker = document.createElement('a-sphere');
+            marker.setAttribute('class', 'iot-marker');
+            marker.setAttribute('radius', '0.5');
+            marker.setAttribute('color', '#00ff88');
+            marker.setAttribute('opacity', '0.7');
+            marker.setAttribute('event-set__enter', '_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9');
+            marker.setAttribute('event-set__leave', '_event: mouseleave; scale: 1 1 1; opacity: 0.7');
+            marker.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 15000');
+            
+            // Текст над маркером
+            const text = document.createElement('a-text');
+            text.setAttribute('value', device.name);
+            text.setAttribute('position', '0 1 0');
+            text.setAttribute('width', '4');
+            text.setAttribute('align', 'center');
+            text.setAttribute('color', '#fff');
+            
+            container.appendChild(marker);
+            container.appendChild(text);
+            document.querySelector('a-scene').appendChild(container);
+            
+            // Додаємо обробник кліку
+            marker.addEventListener('click', function() {
+                showIotInfo(markerId);
+            });
         }
 
         // Швидкі дії
@@ -420,6 +528,8 @@
         window.toggleMarkers = toggleMarkers;
         window.showIotInfo = showIotInfo;
         window.closeIotPanel = closeIotPanel;
+        window.exportMarkers = exportMarkers;
+        window.importMarkers = importMarkers;
     </script>
 </body>
 </html>
