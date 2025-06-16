@@ -5,12 +5,23 @@
     <title>IoT A-Frame HUD</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-msdf-text-component/dist/aframe-msdf-text-component.min.js"></script>
 
     <style>
-      body {
+      html, body {
         margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
         font-family: Arial, sans-serif;
         background: black;
+      }
+
+      a-scene {
+        width: 100%;
+        height: 100%;
+        display: block;
       }
 
       #iot-info-panel {
@@ -41,6 +52,7 @@
     <a-scene>
       <a-assets>
         <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
+        <img id="arialFontImage" src="fonts/arial.png">
       </a-assets>
 
       <!-- Camera with cursor -->
@@ -65,15 +77,13 @@
         event-set__leave="_event: mouseleave; scale: 1 1 1">
       </a-sphere>
 
-      <!-- Optional: Static label in 3D -->
-      <a-text 
-        value="Датчик руху"
-        font="#arialFont"
+      <!-- MSDF Text -->
+      <a-entity
+        msdf-text="font: #arialFont; font-image: #arialFontImage; text: Датчик руху"
         position="-1 1.4 -3"
-        width="4"
-        align="center"
-        color="#fff">
-      </a-text>
+        scale="0.5 0.5 0.5"
+        color="white">
+      </a-entity>
 
       <!-- Ground -->
       <a-plane rotation="-90 0 0" width="30" height="30" color="#444"></a-plane>
@@ -100,12 +110,16 @@
           );
         });
 
-        // Hide panel if clicking outside marker
         document.querySelector('a-scene').addEventListener('click', (e) => {
           if (!e.target.classList.contains('iot-marker')) {
             hideInfo();
           }
         });
+      });
+
+      // Примусове оновлення розміру після завантаження
+      window.addEventListener('load', () => {
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
       });
     </script>
   </body>
