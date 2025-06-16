@@ -30,6 +30,11 @@ function saveCurrentPosition() {
     console.log(`📍 Saved position: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`);
 }
 
+// Реєстрація у глобальному об'єкті window
+window.changeHeight = changeHeight;
+window.setHeight = setHeight;
+window.saveCurrentPosition = saveCurrentPosition;
+
 document.addEventListener('keydown', (e) => {
     switch(e.key.toLowerCase()) {
         case 'q':
