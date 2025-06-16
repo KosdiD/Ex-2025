@@ -2,21 +2,13 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Home XR</title>
+    <title>Smart Home XR Tour</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <!-- A-Frame та плагіни -->
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
-    <!-- Шрифт -->
-    <a-assets>
-        <a-asset-item id="arialFont" src="https://cdn.jsdelivr.net/gh/etiennepinchon/aframe-fonts/fonts/arial/arial-msdf.json"></a-asset-item>
-    </a-assets>
-
-    <!-- Скрипти -->
-    <script src="scripts.js" defer></script>
-
     <style>
         body {
             margin: 0;
@@ -24,69 +16,164 @@
             font-family: sans-serif;
         }
 
-        #height-controls, #save-btn {
+        #controls-panel {
             position: absolute;
             top: 20px;
+            left: 20px;
             z-index: 1000;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 10px;
+            padding: 15px;
             border-radius: 10px;
             font-size: 14px;
+            max-width: 300px;
         }
 
-        #height-controls {
-            left: 20px;
+        #controls-panel button {
+            background: #00bcd4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
         }
 
-        #save-btn {
-            right: 20px;
+        #controls-panel button:hover {
+            background: #0097a7;
         }
 
-        #height-controls input {
-            width: 50px;
+        #controls-panel input {
+            width: 60px;
+            padding: 4px;
+            margin: 0 5px;
         }
 
         #iot-info-panel {
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
             color: white;
-            border-radius: 5px;
-            font-size: 13px;
+            border-radius: 10px;
+            font-size: 14px;
             z-index: 1000;
+            max-width: 350px;
+            display: none;
+        }
+
+        #iot-info-panel.active {
+            display: block;
+        }
+
+        #position-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .control-group {
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-group:last-child {
+            border-bottom: none;
+        }
+
+        #marker-form {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        #marker-form input, #marker-form textarea {
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 3px;
+        }
+
+        #marker-form button {
+            width: 48%;
+        }
+
+        .info-label {
+            color: #00bcd4;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <!-- Контролі висоти -->
-    <div id="height-controls">
-        <strong>Висота гравця:</strong><br>
-        <button onclick="changeHeight(-1)">↓</button>
-        <input type="number" id="height-input" value="10" min="0" max="50">
-        <button onclick="changeHeight(1)">↑</button>
-        <button onclick="setHeight()">Встановити</button><br>
-        <small>Зараз: <span id="current-height">10</span>м</small>
+    <!-- Панель керування -->
+    <div id="controls-panel">
+        <div class="control-group">
+            <strong>🎮 Висота гравця:</strong><br>
+            <button onclick="changeHeight(-1)">↓</button>
+            <input type="number" id="height-input" value="10" min="0" max="50">
+            <button onclick="changeHeight(1)">↑</button>
+            <button onclick="setHeight()">Встановити</button><br>
+            <small>Поточна висота: <span id="current-height">10</span>м</small>
+        </div>
+
+        <div class="control-group">
+            <strong>📍 Створення маркерів:</strong><br>
+            <button onclick="createMarkerAtCurrentPosition()">Створити маркер тут</button>
+            <div id="marker-form" style="display: none;">
+                <input type="text" id="marker-name" placeholder="Назва пристрою">
+                <textarea id="marker-description" placeholder="Опис пристрою" rows="3"></textarea>
+                <button onclick="saveMarker()">✅ Зберегти</button>
+                <button onclick="cancelMarker()">❌ Скасувати</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <strong>🏠 Швидкі дії:</strong><br>
+            <button onclick="resetPosition()">↩️ На початок</button>
+            <button onclick="toggleMarkers()">👁️ Показати/Сховати</button>
+        </div>
     </div>
 
-    <!-- Кнопка збереження позиції -->
-    <button id="save-btn" onclick="saveCurrentPosition()">📍 Зберегти позицію</button>
+    <!-- Інформація про позицію -->
+    <div id="position-info">
+        <strong>Позиція:</strong><br>
+        X: <span id="pos-x">0</span><br>
+        Y: <span id="pos-y">10</span><br>
+        Z: <span id="pos-z">20</span>
+    </div>
 
-    <!-- Панель IoT -->
+    <!-- Панель інформації IoT -->
     <div id="iot-info-panel">
-        <strong id="iot-title">IoT Пристрій</strong><br>
-        <span id="iot-description">Натисніть на маркер для більше інформації.</span>
+        <h3 id="iot-title">IoT Пристрій</h3>
+        <p><span class="info-label">Тип:</span> <span id="iot-type">-</span></p>
+        <p><span class="info-label">Опис:</span> <span id="iot-description">-</span></p>
+        <p><span class="info-label">Статус:</span> <span id="iot-status">Активний</span></p>
+        <p><span class="info-label">Координати:</span> <span id="iot-coords">-</span></p>
+        <button onclick="closeIotPanel()">Закрити</button>
     </div>
 
     <!-- XR сцена -->
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
-        <!-- Модель будинку -->
+        <!-- Асети -->
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
         </a-assets>
 
+        <!-- Освітлення -->
         <a-light type="ambient" intensity="0.6"></a-light>
         <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
 
@@ -113,22 +200,226 @@
             </a-entity>
         </a-entity>
 
-        <!-- Початковий маркер -->
-        <a-sphere class="iot-marker"
-                  position="0 0 0"
-                  radius="0.25"
-                  color="#00bcd4"
-                  event-set__enter="_event: mouseenter; scale: 1.3 1.3 1.3"
-                  event-set__leave="_event: mouseleave; scale: 1 1 1">
-        </a-sphere>
-
-        <a-text value="Початковий"
-                font="#arialFont"
-                position="0 0.5 0"
-                width="4"
-                align="center"
-                color="#fff">
-        </a-text>
+        <!-- Початковий маркер на 0,0,0 -->
+        <a-entity id="marker-0-0-0" position="0 0 0">
+            <a-sphere class="iot-marker"
+                      radius="0.5"
+                      color="#00bcd4"
+                      opacity="0.7"
+                      event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9"
+                      event-set__leave="_event: mouseleave; scale: 1 1 1; opacity: 0.7"
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
+            </a-sphere>
+            <a-text value="Розумний хаб"
+                    position="0 1 0"
+                    width="4"
+                    align="center"
+                    color="#fff">
+            </a-text>
+        </a-entity>
     </a-scene>
+
+    <script>
+        // Глобальні змінні
+        let markersVisible = true;
+        let tempMarkerPosition = null;
+        let markerCounter = 1;
+
+        // IoT пристрої за замовчуванням
+        const defaultDevices = {
+            'marker-0-0-0': {
+                name: 'Розумний хаб',
+                type: 'Центральний контролер',
+                description: 'Основний хаб для керування всіма IoT пристроями в квартирі',
+                position: {x: 0, y: 0, z: 0}
+            }
+        };
+
+        // Функції керування висотою
+        function changeHeight(direction) {
+            const input = document.getElementById('height-input');
+            const currentValue = parseInt(input.value);
+            const newValue = Math.max(0, Math.min(50, currentValue + direction));
+            input.value = newValue;
+            setHeight();
+        }
+
+        function setHeight() {
+            const height = document.getElementById('height-input').value;
+            const rig = document.getElementById('rig');
+            const currentPos = rig.getAttribute('position');
+            rig.setAttribute('position', `${currentPos.x} ${height} ${currentPos.z}`);
+            document.getElementById('current-height').textContent = height;
+        }
+
+        // Створення маркера
+        function createMarkerAtCurrentPosition() {
+            const camera = document.getElementById('camera');
+            const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+            
+            tempMarkerPosition = {
+                x: Math.round(pos.x * 100) / 100,
+                y: Math.round(pos.y * 100) / 100,
+                z: Math.round(pos.z * 100) / 100
+            };
+            
+            document.getElementById('marker-form').style.display = 'block';
+            console.log(`📍 Створення маркера на позиції: x=${tempMarkerPosition.x}, y=${tempMarkerPosition.y}, z=${tempMarkerPosition.z}`);
+        }
+
+        function saveMarker() {
+            const name = document.getElementById('marker-name').value || `IoT Пристрій ${markerCounter}`;
+            const description = document.getElementById('marker-description').value || 'Розумний пристрій';
+            
+            const markerId = `marker-${markerCounter}`;
+            const container = document.createElement('a-entity');
+            container.setAttribute('id', markerId);
+            container.setAttribute('position', `${tempMarkerPosition.x} ${tempMarkerPosition.y} ${tempMarkerPosition.z}`);
+            
+            // Сфера маркера
+            const marker = document.createElement('a-sphere');
+            marker.setAttribute('class', 'iot-marker');
+            marker.setAttribute('radius', '0.5');
+            marker.setAttribute('color', '#00ff88');
+            marker.setAttribute('opacity', '0.7');
+            marker.setAttribute('event-set__enter', '_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9');
+            marker.setAttribute('event-set__leave', '_event: mouseleave; scale: 1 1 1; opacity: 0.7');
+            marker.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 15000');
+            
+            // Текст над маркером
+            const text = document.createElement('a-text');
+            text.setAttribute('value', name);
+            text.setAttribute('position', '0 1 0');
+            text.setAttribute('width', '4');
+            text.setAttribute('align', 'center');
+            text.setAttribute('color', '#fff');
+            
+            container.appendChild(marker);
+            container.appendChild(text);
+            document.querySelector('a-scene').appendChild(container);
+            
+            // Зберігаємо дані про пристрій
+            defaultDevices[markerId] = {
+                name: name,
+                type: 'IoT Пристрій',
+                description: description,
+                position: tempMarkerPosition
+            };
+            
+            // Додаємо обробник кліку
+            marker.addEventListener('click', function() {
+                showIotInfo(markerId);
+            });
+            
+            markerCounter++;
+            cancelMarker();
+            
+            console.log(`✅ Маркер "${name}" створено на позиції:`, tempMarkerPosition);
+        }
+
+        function cancelMarker() {
+            document.getElementById('marker-form').style.display = 'none';
+            document.getElementById('marker-name').value = '';
+            document.getElementById('marker-description').value = '';
+            tempMarkerPosition = null;
+        }
+
+        // Відображення інформації про IoT
+        function showIotInfo(markerId) {
+            const device = defaultDevices[markerId];
+            if (device) {
+                document.getElementById('iot-title').textContent = device.name;
+                document.getElementById('iot-type').textContent = device.type;
+                document.getElementById('iot-description').textContent = device.description;
+                document.getElementById('iot-coords').textContent = `X: ${device.position.x}, Y: ${device.position.y}, Z: ${device.position.z}`;
+                document.getElementById('iot-info-panel').classList.add('active');
+            }
+        }
+
+        function closeIotPanel() {
+            document.getElementById('iot-info-panel').classList.remove('active');
+        }
+
+        // Швидкі дії
+        function resetPosition() {
+            document.getElementById('rig').setAttribute('position', '0 10 20');
+            document.getElementById('height-input').value = 10;
+            document.getElementById('current-height').textContent = 10;
+        }
+
+        function toggleMarkers() {
+            markersVisible = !markersVisible;
+            const markers = document.querySelectorAll('.iot-marker');
+            markers.forEach(marker => {
+                marker.setAttribute('visible', markersVisible);
+            });
+        }
+
+        // Оновлення позиції
+        function updatePositionDisplay() {
+            const camera = document.getElementById('camera');
+            const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+            document.getElementById('pos-x').textContent = pos.x.toFixed(1);
+            document.getElementById('pos-y').textContent = pos.y.toFixed(1);
+            document.getElementById('pos-z').textContent = pos.z.toFixed(1);
+        }
+
+        // Ініціалізація
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Smart Home XR Tour завантажено');
+            setHeight();
+            
+            // Оновлення позиції кожні 100мс
+            setInterval(updatePositionDisplay, 100);
+            
+            // Обробник для початкового маркера
+            const initialMarker = document.querySelector('#marker-0-0-0 .iot-marker');
+            if (initialMarker) {
+                initialMarker.addEventListener('click', function() {
+                    showIotInfo('marker-0-0-0');
+                });
+            }
+            
+            // Обробка клавіш
+            document.addEventListener('keydown', (e) => {
+                switch(e.key.toLowerCase()) {
+                    case 'q':
+                        changeHeight(1);
+                        break;
+                    case 'e':
+                        changeHeight(-1);
+                        break;
+                    case 'r':
+                        resetPosition();
+                        break;
+                    case 'm':
+                        createMarkerAtCurrentPosition();
+                        break;
+                    case 'h':
+                        toggleMarkers();
+                        break;
+                }
+            });
+            
+            // Pointer lock
+            document.addEventListener('click', () => {
+                const canvas = document.querySelector('a-scene canvas');
+                if (canvas && !document.pointerLockElement) {
+                    canvas.requestPointerLock();
+                }
+            });
+        });
+
+        // Глобальні функції
+        window.changeHeight = changeHeight;
+        window.setHeight = setHeight;
+        window.createMarkerAtCurrentPosition = createMarkerAtCurrentPosition;
+        window.saveMarker = saveMarker;
+        window.cancelMarker = cancelMarker;
+        window.resetPosition = resetPosition;
+        window.toggleMarkers = toggleMarkers;
+        window.showIotInfo = showIotInfo;
+        window.closeIotPanel = closeIotPanel;
+    </script>
 </body>
 </html>
