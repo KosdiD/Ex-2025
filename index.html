@@ -222,6 +222,35 @@
                 canvas.requestPointerLock();
             }
         });
+        function saveCurrentPosition() 
+        {
+            const camera = document.getElementById('camera');
+            const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+        
+            // Створити маркер
+            const marker = document.createElement('a-sphere');
+            marker.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+            marker.setAttribute('radius', '0.2');
+            marker.setAttribute('color', '#ff4444');
+            marker.setAttribute('onclick', `alert('IoT info here at ${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}')`);
+            document.querySelector('a-scene').appendChild(marker);
+        
+            console.log(`📍 Saved position: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`);
+        }
+
     </script>
+    <button onclick="saveCurrentPosition()" style="
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      z-index: 1000;
+      padding: 10px 15px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    ">📍 Save Position</button>
+
 </body>
 </html>
