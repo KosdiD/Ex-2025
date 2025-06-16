@@ -1,322 +1,103 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Smart Home House Tour - WebXR</title>
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #000;
-        }
+  <meta charset="utf-8">
+  <title>IoT HUD Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
 
-        #height-controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            z-index: 1000;
-            font-size: 14px;
-        }
+  <style>
+    body { margin: 0; background: black; font-family: Arial, sans-serif; }
 
-        #height-controls button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            margin: 2px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        #height-controls button:hover {
-            background: #45a049;
-        }
-
-        #height-controls input {
-            width: 60px;
-            padding: 5px;
-            margin: 0 5px;
-            border-radius: 3px;
-            border: 1px solid #ccc;
-        }
-
-        #simple-info {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 1000;
-        }
-    </style>
+    #iot-info-panel {
+      display: none;
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      font-size: 18px;
+      z-index: 1001;
+      max-width: 80%;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-    <div id="height-controls">
-        <strong>Player Height Control:</strong><br>
-        <button onclick="changeHeight(-1)">↓ Lower</button>
-        <input type="number" id="height-input" value="10" min="0" max="50" step="1">
-        <button onclick="changeHeight(1)">↑ Higher</button>
-        <button onclick="setHeight()">Set</button><br>
-        <small>Current: <span id="current-height">10</span>m</small>
-    </div>
 
-    <div id="simple-info">
-        🎮 WASD: Move | Mouse: Look | Enter VR: Immersive
-    </div>
-    
-    <div id="iot-info-panel" style="
-    display: none;
-    position: absolute;
-    bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.85);
-    color: #fff;
-    padding: 20px 30px;
-    border-radius: 10px;
-    font-size: 18px;
-    font-family: Arial, sans-serif;
-    z-index: 1001;
-    max-width: 80%;
-    text-align: center;
-">
-        <strong id="iot-title"></strong><br>
-        <span id="iot-description"></span>
-    </div>
+  <!-- HUD overlay -->
+  <div id="iot-info-panel">
+    <strong id="iot-title"></strong><br>
+    <span id="iot-description"></span>
+  </div>
 
-    <a-scene 
-        vr-mode-ui="enabled: true" 
-        device-orientation-permission-ui="enabled: true"
-        background="color: #87CEEB"
-        fog="type: linear; color: #87CEEB; near: 10; far: 100"
-        embedded
-        style="height: 100vh; width: 100vw;">
-        
-        <a-assets>
-            <a-asset-item id="arialFont" src="arial-msdf.json"></a-asset-item>
+  <a-scene background="color: #222">
+    <a-assets>
+      <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
+    </a-assets>
 
-            <!-- Your House Model -->
-            <a-asset-item id="house-model" src="box.glb"></a-asset-item>
-        </a-assets>
+    <a-entity position="0 1.6 4">
+      <a-camera></a-camera>
+    </a-entity>
 
-        <!-- Lighting for your house -->
-        <a-light type="ambient" intensity="0.6"></a-light>
-        <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
-        <a-light type="point" position="0 20 0" intensity="1" distance="50"></a-light>
+    <!-- Marker (Sphere) -->
+    <a-sphere
+      id="motion-sensor"
+      class="iot-marker"
+      position="-1 1 -3"
+      radius="0.25"
+      color="#00bcd4"
+      event-set__enter="_event: mouseenter; scale: 1.3 1.3 1.3"
+      event-set__leave="_event: mouseleave; scale: 1 1 1">
+    </a-sphere>
 
-        <!-- Ground plane -->
-        <a-plane 
-            position="0 0 0" 
-            rotation="-90 0 0" 
-            width="200" 
-            height="200" 
-            material="color: #4a5d4a; metalness: 0.1; roughness: 0.8"
-            shadow="receive: true">
-        </a-plane>
+    <!-- Ground -->
+    <a-plane rotation="-90 0 0" width="30" height="30" color="#444"></a-plane>
 
-        <!-- YOUR HOUSE MODEL -->
-        <a-gltf-model 
-            id="house"
-            src="#house-model"
-            position="0 0 0"
-            scale="1 1 1"
-            rotation="0 0 0"
-            shadow="cast: true; receive: true">
-        </a-gltf-model>
+    <!-- Optional: Label above marker -->
+    <a-text 
+      value="Датчик руху"
+      font="#arialFont"
+      position="-1 1.4 -3"
+      width="4"
+      align="center"
+      color="#fff">
+    </a-text>
+  </a-scene>
 
-        <!-- Player Rig with Adjustable Height -->
-        <a-entity 
-            id="rig" 
-            movement-controls="fly: false; constrainToNavMesh: false"
-            position="0 10 20">
-            <a-entity 
-                id="camera"
-                camera 
-                look-controls="pointerLockEnabled: true"
-                wasd-controls="acceleration: 25; easing: 15; fly: false"
-                position="0 1.6 0">
-                
-                <!-- VR Hand Controllers -->
-                <a-entity 
-                    id="rightHand"
-                    hand-controls="hand: right; handModelStyle: lowPoly; color: #ffcccc"
-                    laser-controls="hand: right">
-                </a-entity>
-                
-                <a-entity 
-                    id="leftHand"
-                    hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
-                    laser-controls="hand: left">
-                </a-entity>
-                
-                <!-- Cursor for desktop interaction -->
-                <a-cursor
-                    id="cursor"
-                    material="color: #00ff88; shader: flat">
-                </a-cursor>
-            </a-entity>
-        </a-entity>
-        <a-sphere 
-            position="-9.88 14.60 -11.68" 
-            radius="0.25" 
-            color="#00bcd4"
-            class="iot-marker"
-            id="motion-sensor"
-            event-set__enter="_event: mouseenter; scale: 1.4 1.4 1.4"
-            event-set__leave="_event: mouseleave; scale: 1 1 1">
-        </a-sphere>
+  <script>
+    // Показати HUD текст
+    function showInfo(title, description) {
+      document.getElementById('iot-title').textContent = title;
+      document.getElementById('iot-description').textContent = description;
+      document.getElementById('iot-info-panel').style.display = 'block';
+    }
 
+    // Сховати HUD
+    function hideInfo() {
+      document.getElementById('iot-info-panel').style.display = 'none';
+    }
 
-        
-        <a-entity 
-            position="-9.88 15.1 -11.68"
-            text="value: Датчик руху\nОпис: Використовуючи ультразвукові хвилі визначає рух і вмикає лампу; 
-                  font: #arialFont; color: #fff; width: 4"
-            geometry="primitive: plane; height: auto; width: auto"
-            material="color: black; opacity: 0.7"
-            scale="1 1 1">
-        </a-entity>
+    document.addEventListener('DOMContentLoaded', () => {
+      const marker = document.getElementById('motion-sensor');
 
-        <!-- Sky -->
-        <a-sky color="#87CEEB"></a-sky>
-    </a-scene>
+      marker.addEventListener('click', () => {
+        showInfo(
+          'Датчик руху',
+          'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу'
+        );
+      });
 
-    <script>
-        // Height control functions
-        function changeHeight(direction) {
-            const input = document.getElementById('height-input');
-            const currentValue = parseInt(input.value);
-            const newValue = Math.max(0, Math.min(50, currentValue + direction));
-            input.value = newValue;
-            setHeight();
+      // Клік поза маркером — ховаємо HUD
+      document.querySelector('a-scene').addEventListener('click', (e) => {
+        if (!e.target.classList.contains('iot-marker')) {
+          hideInfo();
         }
-
-        function setHeight() {
-            const height = document.getElementById('height-input').value;
-            const rig = document.getElementById('rig');
-            const currentPos = rig.getAttribute('position');
-            
-            rig.setAttribute('position', `${currentPos.x} ${height} ${currentPos.z}`);
-            document.getElementById('current-height').textContent = height;
-            
-            console.log(`Player height set to: ${height}m`);
-        }
-
-        // Keyboard controls for height
-        document.addEventListener('keydown', (e) => {
-            switch(e.key.toLowerCase()) {
-                case 'q':
-                    changeHeight(1); // Q to go higher
-                    break;
-                case 'e':
-                    changeHeight(-1); // E to go lower
-                    break;
-                case 'r':
-                    // Reset position
-                    document.getElementById('rig').setAttribute('position', '0 10 20');
-                    document.getElementById('height-input').value = 10;
-                    document.getElementById('current-height').textContent = 10;
-                    console.log('Position reset');
-                    break;
-            }
-        });
-
-        // Scene initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🏠 House Tour Experience Initialized');
-            console.log('🎮 Controls:');
-            console.log('   WASD - Move around');
-            console.log('   Mouse - Look around');
-            console.log('   Q/E - Change height');
-            console.log('   R - Reset position');
-            console.log('   Use height controls in top-left corner');
-            
-            // Handle model loading
-            const house = document.getElementById('house');
-            house.addEventListener('model-loaded', () => {
-                console.log('✅ House model loaded successfully!');
-            });
-            
-            house.addEventListener('model-error', (e) => {
-                console.warn('⚠️ Could not load box.glb - make sure the file is in the same folder');
-                console.log('📁 Expected file: box.glb in same directory as HTML file');
-            });
-
-            // Set initial height
-            setHeight();
-        });
-
-        // Mouse lock for better camera control
-        document.addEventListener('click', () => {
-            const canvas = document.querySelector('a-scene canvas');
-            if (canvas && !document.pointerLockElement) {
-                canvas.requestPointerLock();
-            }
-        });
-        function saveCurrentPosition() 
-        {
-            const camera = document.getElementById('camera');
-            const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-        
-            // Створити маркер
-            const marker = document.createElement('a-sphere');
-            marker.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-            marker.setAttribute('radius', '0.2');
-            marker.setAttribute('color', '#ff4444');
-            marker.setAttribute('onclick', `alert('IoT info here at ${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}')`);
-            document.querySelector('a-scene').appendChild(marker);
-        
-            console.log(`📍 Saved position: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`);
-        }
-        function showInfo(title, description) {
-            document.getElementById('iot-title').textContent = title;
-            document.getElementById('iot-description').textContent = description;
-            document.getElementById('iot-info-panel').style.display = 'block';
-        }
-        
-        function hideInfo() {
-            document.getElementById('iot-info-panel').style.display = 'none';
-        }
-        
-        // При натисканні на маркер — показати HUD
-        document.addEventListener('DOMContentLoaded', () => {
-            const marker = document.getElementById('motion-sensor');
-            marker.addEventListener('click', () => {
-                showInfo('Датчик руху', 'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу');
-            });
-        
-            // Клік поза маркером — ховати
-            document.querySelector('a-scene').addEventListener('click', (e) => {
-                if (!e.target.classList.contains('iot-marker')) {
-                    hideInfo();
-                }
-            });
-        });
-
-    </script>
-    <button onclick="saveCurrentPosition()" style="
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      z-index: 1000;
-      padding: 10px 15px;
-      background: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    ">📍 Save Position</button>
-
+      });
+    });
+  </script>
 </body>
 </html>
