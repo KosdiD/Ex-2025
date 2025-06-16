@@ -39,9 +39,15 @@
       <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
     </a-assets>
 
-    <a-entity position="0 1.6 4">
-      <a-camera></a-camera>
-    </a-entity>
+   <a-entity position="0 1.6 4">
+    <a-camera>
+      <a-cursor 
+        fuse="false" 
+        raycaster="objects: .iot-marker" 
+        material="color: #00ff88; shader: flat">
+      </a-cursor>
+    </a-camera>
+  </a-entity>
 
     <!-- Marker (Sphere) -->
     <a-sphere
