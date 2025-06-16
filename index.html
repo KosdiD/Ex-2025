@@ -74,6 +74,26 @@
     <div id="simple-info">
         🎮 WASD: Move | Mouse: Look | Enter VR: Immersive
     </div>
+    
+    <div id="iot-info-panel" style="
+        display: none;
+        position: absolute;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.85);
+        color: #fff;
+        padding: 20px 30px;
+        border-radius: 10px;
+        font-size: 18px;
+        font-family: Arial, sans-serif;
+        z-index: 1001;
+        max-width: 80%;
+        text-align: center;
+    ">
+        <strong id="iot-title"></strong><br>
+        <span id="iot-description"></span>
+    </div>
 
     <a-scene 
         vr-mode-ui="enabled: true" 
@@ -84,6 +104,8 @@
         style="height: 100vh; width: 100vw;">
         
         <a-assets>
+            <a-asset-item id="arialFont" src="arial-msdf.json"></a-asset-item>
+
             <!-- Your House Model -->
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
         </a-assets>
@@ -151,13 +173,15 @@
             color="#00bcd4"
             class="iot-marker"
             event-set__enter="_event: mouseenter; scale: 1.4 1.4 1.4"
-            event-set__leave="_event: mouseleave; scale: 1 1 1">
+            event-set__leave="_event: mouseleave; scale: 1 1 1"
+            onclick="showInfo('Датчик руху', 'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу')">
         </a-sphere>
+
         
         <a-entity 
             position="-9.88 15.1 -11.68"
-            text="value: Датчик руху\nОпис: Використовуючи ультразвукові хвилі визначає рух і вмикає лампу; color: #fff; width: 4"
-            visible="true"
+            text="value: Датчик руху\nОпис: Використовуючи ультразвукові хвилі визначає рух і вмикає лампу; 
+                  font: #arialFont; color: #fff; width: 4"
             geometry="primitive: plane; height: auto; width: auto"
             material="color: black; opacity: 0.7"
             scale="1 1 1">
@@ -254,6 +278,23 @@
         
             console.log(`📍 Saved position: x=${pos.x.toFixed(2)}, y=${pos.y.toFixed(2)}, z=${pos.z.toFixed(2)}`);
         }
+        function showInfo(title, description) {
+            document.getElementById('iot-title').textContent = title;
+            document.getElementById('iot-description').textContent = description;
+            document.getElementById('iot-info-panel').style.display = 'block';
+        }
+        
+        function hideInfo() {
+            document.getElementById('iot-info-panel').style.display = 'none';
+        }
+        
+        // Закриття по кліку будь-де
+        document.addEventListener('click', function (e) {
+            const panel = document.getElementById('iot-info-panel');
+            if (panel.style.display === 'block' && !e.target.classList.contains('iot-marker')) {
+                hideInfo();
+            }
+        });
 
     </script>
     <button onclick="saveCurrentPosition()" style="
