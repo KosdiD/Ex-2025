@@ -145,6 +145,23 @@
                 </a-cursor>
             </a-entity>
         </a-entity>
+        <a-sphere 
+            position="-9.88 14.60 -11.68" 
+            radius="0.25" 
+            color="#00bcd4"
+            class="iot-marker"
+            event-set__enter="_event: mouseenter; scale: 1.4 1.4 1.4"
+            event-set__leave="_event: mouseleave; scale: 1 1 1">
+        </a-sphere>
+        
+        <a-entity 
+            position="-9.88 15.1 -11.68"
+            text="value: Датчик руху\nОпис: Використовуючи ультразвукові хвилі визначає рух і вмикає лампу; color: #fff; width: 4"
+            visible="true"
+            geometry="primitive: plane; height: auto; width: auto"
+            material="color: black; opacity: 0.7"
+            scale="1 1 1">
+        </a-entity>
 
         <!-- Sky -->
         <a-sky color="#87CEEB"></a-sky>
