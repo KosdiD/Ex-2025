@@ -76,21 +76,21 @@
     </div>
     
     <div id="iot-info-panel" style="
-        display: none;
-        position: absolute;
-        bottom: 50px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0,0,0,0.85);
-        color: #fff;
-        padding: 20px 30px;
-        border-radius: 10px;
-        font-size: 18px;
-        font-family: Arial, sans-serif;
-        z-index: 1001;
-        max-width: 80%;
-        text-align: center;
-    ">
+    display: none;
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-family: Arial, sans-serif;
+    z-index: 1001;
+    max-width: 80%;
+    text-align: center;
+">
         <strong id="iot-title"></strong><br>
         <span id="iot-description"></span>
     </div>
@@ -172,10 +172,11 @@
             radius="0.25" 
             color="#00bcd4"
             class="iot-marker"
+            id="motion-sensor"
             event-set__enter="_event: mouseenter; scale: 1.4 1.4 1.4"
-            event-set__leave="_event: mouseleave; scale: 1 1 1"
-            onclick="showInfo('Датчик руху', 'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу')">
+            event-set__leave="_event: mouseleave; scale: 1 1 1">
         </a-sphere>
+
 
         
         <a-entity 
@@ -288,12 +289,19 @@
             document.getElementById('iot-info-panel').style.display = 'none';
         }
         
-        // Закриття по кліку будь-де
-        document.addEventListener('click', function (e) {
-            const panel = document.getElementById('iot-info-panel');
-            if (panel.style.display === 'block' && !e.target.classList.contains('iot-marker')) {
-                hideInfo();
-            }
+        // При натисканні на маркер — показати HUD
+        document.addEventListener('DOMContentLoaded', () => {
+            const marker = document.getElementById('motion-sensor');
+            marker.addEventListener('click', () => {
+                showInfo('Датчик руху', 'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу');
+            });
+        
+            // Клік поза маркером — ховати
+            document.querySelector('a-scene').addEventListener('click', (e) => {
+                if (!e.target.classList.contains('iot-marker')) {
+                    hideInfo();
+                }
+            });
         });
 
     </script>
