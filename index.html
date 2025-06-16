@@ -24,4 +24,89 @@
         padding: 20px 30px;
         border-radius: 10px;
         font-size: 18px;
-        z-index: 100
+        z-index: 1001;
+        max-width: 80%;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- HUD overlay -->
+    <div id="iot-info-panel">
+      <strong id="iot-title"></strong><br>
+      <span id="iot-description"></span>
+    </div>
+
+    <a-scene>
+      <a-assets>
+        <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
+      </a-assets>
+
+      <!-- Camera with cursor -->
+      <a-entity position="0 1.6 4">
+        <a-camera>
+          <a-cursor 
+            fuse="false" 
+            raycaster="objects: .iot-marker" 
+            material="color: #00ff88; shader: flat">
+          </a-cursor>
+        </a-camera>
+      </a-entity>
+
+      <!-- IoT Sphere Marker -->
+      <a-sphere
+        id="motion-sensor"
+        class="iot-marker"
+        position="-1 1 -3"
+        radius="0.25"
+        color="#00bcd4"
+        event-set__enter="_event: mouseenter; scale: 1.3 1.3 1.3"
+        event-set__leave="_event: mouseleave; scale: 1 1 1">
+      </a-sphere>
+
+      <!-- Optional: Static label in 3D -->
+      <a-text 
+        value="Датчик руху"
+        font="#arialFont"
+        position="-1 1.4 -3"
+        width="4"
+        align="center"
+        color="#fff">
+      </a-text>
+
+      <!-- Ground -->
+      <a-plane rotation="-90 0 0" width="30" height="30" color="#444"></a-plane>
+    </a-scene>
+
+    <script>
+      function showInfo(title, description) {
+        document.getElementById('iot-title').textContent = title;
+        document.getElementById('iot-description').textContent = description;
+        document.getElementById('iot-info-panel').style.display = 'block';
+      }
+
+      function hideInfo() {
+        document.getElementById('iot-info-panel').style.display = 'none';
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const marker = document.getElementById('motion-sensor');
+
+        marker.addEventListener('click', () => {
+          showInfo(
+            'Датчик руху',
+            'Використовуючи ультразвукові хвилі визначає рух і вмикає лампу'
+          );
+        });
+
+        // Hide panel if clicking outside marker
+        document.querySelector('a-scene').addEventListener('click', (e) => {
+          if (!e.target.classList.contains('iot-marker')) {
+            hideInfo();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
