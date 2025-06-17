@@ -1746,6 +1746,10 @@
             
             // Обробка клавіш
             document.addEventListener('keydown', (e) => {
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+                
+                e.stopPropagation();
+                
                 switch(e.key.toLowerCase()) {
                     case 'q':
                         changeHeight(1);
@@ -1766,7 +1770,6 @@
                         toggleVoiceRecognition();
                         break;
                     case 'l':
-                        // Швидке перемикання всього світла
                         const allOn = Object.values(lightingSystem.roomLights).some(l => l.on);
                         if (allOn) {
                             voiceCommands['вимкни світло']();
@@ -1775,11 +1778,9 @@
                         }
                         break;
                     case 'b':
-                        // Перемикання ролетів
                         toggleBlinds();
                         break;
-                    case 'Tab':
-                        // Перемикання меню
+                    case 'tab':
                         e.preventDefault();
                         toggleAllPanels();
                         break;
