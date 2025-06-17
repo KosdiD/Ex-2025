@@ -380,6 +380,9 @@
         <!-- Асети -->
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
+            <!-- Додайте шрифти тут -->
+            <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
+            <img id="arialFontTexture" src="fonts/arial-msdf.png">
         </a-assets>
 
         <!-- Освітлення -->
@@ -921,7 +924,28 @@
                 }
             }
         }
-
+                // Голосові команди оголошені наново 1337
+        const voiceCommands = {
+            'створити маркер': () => createMarkerAtCurrentPosition(),
+            'створи маркер': () => createMarkerAtCurrentPosition(),
+            'додати пристрій': () => createMarkerAtCurrentPosition(),
+            'показати маркери': () => { markersVisible = true; toggleMarkers(); },
+            'покажи маркери': () => { markersVisible = true; toggleMarkers(); },
+            'сховати маркери': () => { markersVisible = false; toggleMarkers(); },
+            'сховай маркери': () => { markersVisible = false; toggleMarkers(); },
+            'на початок': () => resetPosition(),
+            'додому': () => resetPosition(),
+            'скинути позицію': () => resetPosition(),
+            'експорт': () => exportMarkers(),
+            'експортувати': () => exportMarkers(),
+            'зберегти маркери': () => exportMarkers(),
+            'камера вгору': () => changeHeight(5),
+            'камера вниз': () => changeHeight(-5),
+            'вище': () => changeHeight(3),
+            'нижче': () => changeHeight(-3),
+            'стоп': () => stopVoiceRecognition(),
+            'зупинити': () => stopVoiceRecognition()
+        };
         // Додаємо голосові команди для світла
         const lightVoiceCommands = {
             'увімкни світло': () => {
@@ -964,28 +988,7 @@
         // Додаємо нові команди до існуючих
         Object.assign(voiceCommands, lightVoiceCommands);
 
-        // Голосові команди
-        const voiceCommands = {
-            'створити маркер': () => createMarkerAtCurrentPosition(),
-            'створи маркер': () => createMarkerAtCurrentPosition(),
-            'додати пристрій': () => createMarkerAtCurrentPosition(),
-            'показати маркери': () => { markersVisible = true; toggleMarkers(); },
-            'покажи маркери': () => { markersVisible = true; toggleMarkers(); },
-            'сховати маркери': () => { markersVisible = false; toggleMarkers(); },
-            'сховай маркери': () => { markersVisible = false; toggleMarkers(); },
-            'на початок': () => resetPosition(),
-            'додому': () => resetPosition(),
-            'скинути позицію': () => resetPosition(),
-            'експорт': () => exportMarkers(),
-            'експортувати': () => exportMarkers(),
-            'зберегти маркери': () => exportMarkers(),
-            'камера вгору': () => changeHeight(5),
-            'камера вниз': () => changeHeight(-5),
-            'вище': () => changeHeight(3),
-            'нижче': () => changeHeight(-3),
-            'стоп': () => stopVoiceRecognition(),
-            'зупинити': () => stopVoiceRecognition()
-        };
+//ТУТ БУЛИ ОГОЛОШЕНІ ГОЛОСОВІ КОМАНДИ 1337
 
         // Ініціалізація Web Speech API
         function initVoiceRecognition() {
@@ -1850,13 +1853,6 @@
         window.exportLights = exportLights;
         window.exportZones = exportZones;
         window.toggleAllPanels = toggleAllPanels;ition = toggleVoiceRecognition;
-        window.toggleMLMode = toggleMLMode;
-        window.updateTimeOfDay = updateTimeOfDay;
-        window.setTimePreset = setTimePreset;
-        window.toggleRoomLight = toggleRoomLight;
-        window.createLightAtCurrentPosition = createLightAtCurrentPosition;
-        window.createZoneAtCurrentPosition = createZoneAtCurrentPosition;
-        window.toggleBlinds = toggleBlinds; toggleMLMode;
     </script>
 </body>
 </html>
