@@ -7,8 +7,11 @@ let voiceRecognition = null;
 let isListening = false;
 let useMLModel = false;
 let speechModel = null;
+let lightDevices = {}; // Для збереження світлових пристроїв
+let lightCounter = 1;
+let globalBrightness = 50;
 
-// Голосові команди
+// Голосові команди з додаванням світлових команд
 const voiceCommands = {
     'створити маркер': () => createMarkerAtCurrentPosition(),
     'створи маркер': () => createMarkerAtCurrentPosition(),
@@ -28,7 +31,19 @@ const voiceCommands = {
     'вище': () => changeHeight(3),
     'нижче': () => changeHeight(-3),
     'стоп': () => stopVoiceRecognition(),
-    'зупинити': () => stopVoiceRecognition()
+    'зупинити': () => stopVoiceRecognition(),
+    // Нові команди для світла
+    'створити світло': () => createLight(),
+    'додати світло': () => createLight(),
+    'вимкнути світло': () => setAllLights(false),
+    'вимкни світло': () => setAllLights(false),
+    'увімкнути світло': () => setAllLights(true),
+    'увімкни світло': () => setAllLights(true),
+    'вимкнути все': () => setAllLights(false),
+    'увімкнути все': () => setAllLights(true),
+    'максимальна яскравість': () => updateBrightness(100),
+    'мінімальна яскравість': () => updateBrightness(0),
+    'середня яскравість': () => updateBrightness(50)
 };
 
 // Ініціалізація Web Speech API
@@ -108,9 +123,18 @@ function initVoiceRecognition() {
     return true;
 }
 
-// Обробка голосової команди
+// Обробка голосової команди з підтримкою яскравості
 function processVoiceCommand(command) {
     console.log('🎯 Обробка команди:', command);
+    
+    // Перевірка команди яскравості з числом
+    const brightnessMatch = command.match(/яскравість\s*(\d+)/);
+    if (brightnessMatch) {
+        const brightness = Math.min(100, Math.max(0, parseInt(brightnessMatch[1])));
+        updateBrightness(brightness);
+        document.getElementById('voice-status-text').textContent = `Яскравість встановлено: ${brightness}%`;
+        return;
+    }
     
     // Шукаємо відповідну команду
     for (const [key, action] of Object.entries(voiceCommands)) {
@@ -238,7 +262,7 @@ const defaultDevices = {
     }
 };
 
-// Типи Edge ML пристроїв
+// Типи Edge ML пристроїв з додаванням світла
 const edgeMLTypes = {
     vision: {
         name: 'Камера з Computer Vision',
@@ -269,11 +293,135 @@ const edgeMLTypes = {
         color: '#dda0dd',
         mlModels: ['Time Series Forecasting', 'Regression Models'],
         features: ['Прогноз температури', 'Оптимізація енергії', 'Адаптивне навчання']
+    },
+    light: {
+        name: 'Розумне світло',
+        color: '#ffeb3b',
+        mlModels: ['Ambient Light Prediction', 'Presence Detection'],
+        features: ['Автоматичне регулювання', 'Адаптивна яскравість', 'Економія енергії']
     }
 };
 
 // Копіюємо дефолтні пристрої в робочі дані
 deviceData = {...defaultDevices};
+
+// Функції керування світлом
+function createLight() {
+    const camera = document.getElementById('camera');
+    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+    
+    const lightId = `light-${lightCounter++}`;
+    const lightPosition = {
+        x: Math.round(pos.x * 100) / 100,
+        y: Math.round(pos.y * 100) / 100 + 5, // Трохи вище від камери
+        z: Math.round(pos.z * 100) / 100
+    };
+    
+    // Створюємо A-Frame світло
+    const lightEntity = document.createElement('a-entity');
+    lightEntity.setAttribute('id', lightId);
+    lightEntity.setAttribute('position', `${lightPosition.x} ${lightPosition.y} ${lightPosition.z}`);
+    
+    // Точкове світло
+    const pointLight = document.createElement('a-light');
+    pointLight.setAttribute('type', 'point');
+    pointLight.setAttribute('color', '#ffeb3b');
+    pointLight.setAttribute('intensity', globalBrightness / 100);
+    pointLight.setAttribute('distance', '20');
+    pointLight.setAttribute('decay', '2');
+    
+    // Візуальна лампочка
+    const bulb = document.createElement('a-sphere');
+    bulb.setAttribute('radius', '0.3');
+    bulb.setAttribute('color', '#ffeb3b');
+    bulb.setAttribute('emissive', '#ffeb3b');
+    bulb.setAttribute('emissiveIntensity', globalBrightness / 100);
+    bulb.setAttribute('opacity', '0.8');
+    
+    // Текст
+    const text = document.createElement('a-text');
+    text.setAttribute('value', `Світло ${lightCounter - 1}`);
+    text.setAttribute('position', '0 0.8 0');
+    text.setAttribute('width', '3');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
+    
+    lightEntity.appendChild(pointLight);
+    lightEntity.appendChild(bulb);
+    lightEntity.appendChild(text);
+    
+    document.querySelector('a-scene').appendChild(lightEntity);
+    
+    // Зберігаємо дані про світло
+    lightDevices[lightId] = {
+        id: lightId,
+        name: `Світло ${lightCounter - 1}`,
+        position: lightPosition,
+        isOn: true,
+        brightness: globalBrightness,
+        element: lightEntity
+    };
+    
+    console.log(`💡 Створено світло на позиції:`, lightPosition);
+}
+
+function toggleAllLights() {
+    const anyOn = Object.values(lightDevices).some(light => light.isOn);
+    setAllLights(!anyOn);
+}
+
+function setAllLights(state) {
+    Object.values(lightDevices).forEach(light => {
+        light.isOn = state;
+        updateLightState(light);
+    });
+    
+    console.log(`💡 Всі світла ${state ? 'увімкнено' : 'вимкнено'}`);
+}
+
+function updateBrightness(value) {
+    globalBrightness = value;
+    document.getElementById('brightness-slider').value = value;
+    document.getElementById('brightness-value').textContent = `${value}%`;
+    
+    // Оновлюємо всі світла
+    Object.values(lightDevices).forEach(light => {
+        light.brightness = value;
+        if (light.isOn) {
+            updateLightState(light);
+        }
+    });
+    
+    // Оновлюємо загальне освітлення
+    const ambientLight = document.getElementById('ambient-light');
+    ambientLight.setAttribute('intensity', 0.3 + (value / 100) * 0.4);
+}
+
+function updateLightState(light) {
+    const pointLight = light.element.querySelector('a-light');
+    const bulb = light.element.querySelector('a-sphere');
+    
+    if (light.isOn) {
+        pointLight.setAttribute('intensity', light.brightness / 100);
+        bulb.setAttribute('emissiveIntensity', light.brightness / 100);
+        bulb.setAttribute('opacity', '0.8');
+    } else {
+        pointLight.setAttribute('intensity', '0');
+        bulb.setAttribute('emissiveIntensity', '0');
+        bulb.setAttribute('opacity', '0.3');
+    }
+}
+
+let currentLightDevice = null;
+
+function toggleLightDevice() {
+    if (currentLightDevice) {
+        currentLightDevice.isOn = !currentLightDevice.isOn;
+        updateLightState(currentLightDevice);
+        document.getElementById('light-state').textContent = currentLightDevice.isOn ? 'Увімкнено' : 'Вимкнено';
+    }
+}
 
 // Функції керування висотою
 function changeHeight(direction) {
@@ -353,6 +501,7 @@ function saveMarker() {
     text.setAttribute('width', '4');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
     
     // Додаємо іконку ML якщо це ML пристрій
     if (mlType) {
@@ -362,6 +511,29 @@ function saveMarker() {
         mlIcon.setAttribute('width', '6');
         mlIcon.setAttribute('align', 'center');
         container.appendChild(mlIcon);
+    }
+    
+    // Якщо це світловий пристрій, додаємо світло
+    if (mlType === 'light') {
+        const lightId = `device-light-${markerCounter}`;
+        const pointLight = document.createElement('a-light');
+        pointLight.setAttribute('type', 'point');
+        pointLight.setAttribute('color', '#ffeb3b');
+        pointLight.setAttribute('intensity', '0.5');
+        pointLight.setAttribute('distance', '15');
+        pointLight.setAttribute('decay', '2');
+        container.appendChild(pointLight);
+        
+        // Зберігаємо як світловий пристрій
+        lightDevices[lightId] = {
+            id: lightId,
+            name: name,
+            position: tempMarkerPosition,
+            isOn: true,
+            brightness: 50,
+            element: container,
+            isMarker: true
+        };
     }
     
     container.appendChild(marker);
@@ -376,7 +548,8 @@ function saveMarker() {
         position: tempMarkerPosition,
         mlType: mlType,
         mlModels: mlModels,
-        mlFeatures: mlFeatures
+        mlFeatures: mlFeatures,
+        isLight: mlType === 'light'
     };
     
     // Додаємо обробник кліку
@@ -416,12 +589,27 @@ function showIotInfo(markerId) {
             document.getElementById('iot-ml-features').textContent = 'Стандартні функції';
         }
         
+        // Показуємо контролі для світла
+        if (device.isLight) {
+            document.getElementById('light-controls').style.display = 'block';
+            const lightDevice = Object.values(lightDevices).find(l => l.name === device.name);
+            if (lightDevice) {
+                currentLightDevice = lightDevice;
+                document.getElementById('light-state').textContent = lightDevice.isOn ? 'Увімкнено' : 'Вимкнено';
+                document.getElementById('light-brightness').textContent = `${lightDevice.brightness}%`;
+            }
+        } else {
+            document.getElementById('light-controls').style.display = 'none';
+            currentLightDevice = null;
+        }
+        
         document.getElementById('iot-info-panel').classList.add('active');
     }
 }
 
 function closeIotPanel() {
     document.getElementById('iot-info-panel').classList.remove('active');
+    currentLightDevice = null;
 }
 
 // Експорт маркерів
@@ -430,7 +618,10 @@ function exportMarkers() {
         version: '1.0',
         exportDate: new Date().toISOString(),
         devices: deviceData,
-        markerCounter: markerCounter
+        lights: lightDevices,
+        markerCounter: markerCounter,
+        lightCounter: lightCounter,
+        globalBrightness: globalBrightness
     };
     
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -441,7 +632,7 @@ function exportMarkers() {
     link.download = `smart-home-iot-markers-${Date.now()}.json`;
     link.click();
     
-    console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів');
+    console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів та', Object.keys(lightDevices).length, 'світлових пристроїв');
 }
 
 // Імпорт маркерів
@@ -462,9 +653,21 @@ function importMarkers(event) {
                 }
             });
             
+            // Видаляємо всі світла
+            Object.keys(lightDevices).forEach(lightId => {
+                const light = lightDevices[lightId];
+                if (light.element) light.element.remove();
+            });
+            lightDevices = {};
+            
             // Завантажуємо нові дані
             deviceData = {...importData.devices};
             markerCounter = importData.markerCounter || Object.keys(deviceData).length;
+            lightCounter = importData.lightCounter || 1;
+            
+            if (importData.globalBrightness !== undefined) {
+                updateBrightness(importData.globalBrightness);
+            }
             
             // Створюємо маркери зі збережених даних
             Object.entries(deviceData).forEach(([markerId, device]) => {
@@ -473,8 +676,17 @@ function importMarkers(event) {
                 }
             });
             
-            console.log('✅ Імпортовано', Object.keys(deviceData).length, 'маркерів');
-            alert('Маркери успішно імпортовано!');
+            // Відновлюємо світла
+            if (importData.lights) {
+                Object.entries(importData.lights).forEach(([lightId, lightData]) => {
+                    if (!lightData.isMarker) {
+                        createLightFromData(lightId, lightData);
+                    }
+                });
+            }
+            
+            console.log('✅ Імпортовано', Object.keys(deviceData).length, 'маркерів та', Object.keys(lightDevices).length, 'світлових пристроїв');
+            alert('Дані успішно імпортовано!');
             
         } catch (error) {
             console.error('❌ Помилка імпорту:', error);
@@ -485,6 +697,50 @@ function importMarkers(event) {
     
     // Очищаємо input для можливості повторного вибору того ж файлу
     event.target.value = '';
+}
+
+// Створення світла з даних
+function createLightFromData(lightId, lightData) {
+    const lightEntity = document.createElement('a-entity');
+    lightEntity.setAttribute('id', lightId);
+    lightEntity.setAttribute('position', `${lightData.position.x} ${lightData.position.y} ${lightData.position.z}`);
+    
+    // Точкове світло
+    const pointLight = document.createElement('a-light');
+    pointLight.setAttribute('type', 'point');
+    pointLight.setAttribute('color', '#ffeb3b');
+    pointLight.setAttribute('intensity', lightData.isOn ? lightData.brightness / 100 : 0);
+    pointLight.setAttribute('distance', '20');
+    pointLight.setAttribute('decay', '2');
+    
+    // Візуальна лампочка
+    const bulb = document.createElement('a-sphere');
+    bulb.setAttribute('radius', '0.3');
+    bulb.setAttribute('color', '#ffeb3b');
+    bulb.setAttribute('emissive', '#ffeb3b');
+    bulb.setAttribute('emissiveIntensity', lightData.isOn ? lightData.brightness / 100 : 0);
+    bulb.setAttribute('opacity', lightData.isOn ? '0.8' : '0.3');
+    
+    // Текст
+    const text = document.createElement('a-text');
+    text.setAttribute('value', lightData.name);
+    text.setAttribute('position', '0 0.8 0');
+    text.setAttribute('width', '3');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
+    
+    lightEntity.appendChild(pointLight);
+    lightEntity.appendChild(bulb);
+    lightEntity.appendChild(text);
+    
+    document.querySelector('a-scene').appendChild(lightEntity);
+    
+    // Зберігаємо дані
+    lightDevices[lightId] = {
+        ...lightData,
+        element: lightEntity
+    };
 }
 
 // Створення маркера з даних
@@ -521,6 +777,7 @@ function createMarkerFromData(markerId, device) {
     text.setAttribute('width', '4');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
     
     // Додаємо іконку ML якщо це ML пристрій
     if (device.mlType) {
@@ -530,6 +787,32 @@ function createMarkerFromData(markerId, device) {
         mlIcon.setAttribute('width', '6');
         mlIcon.setAttribute('align', 'center');
         container.appendChild(mlIcon);
+    }
+    
+    // Якщо це світловий пристрій
+    if (device.mlType === 'light') {
+        const lightId = `device-light-${markerId.split('-')[1]}`;
+        const pointLight = document.createElement('a-light');
+        pointLight.setAttribute('type', 'point');
+        pointLight.setAttribute('color', '#ffeb3b');
+        pointLight.setAttribute('intensity', '0.5');
+        pointLight.setAttribute('distance', '15');
+        pointLight.setAttribute('decay', '2');
+        container.appendChild(pointLight);
+        
+        // Відновлюємо світловий пристрій
+        const existingLight = Object.values(lightDevices).find(l => l.name === device.name && l.isMarker);
+        if (!existingLight) {
+            lightDevices[lightId] = {
+                id: lightId,
+                name: device.name,
+                position: device.position,
+                isOn: true,
+                brightness: 50,
+                element: container,
+                isMarker: true
+            };
+        }
     }
     
     container.appendChild(marker);
@@ -603,6 +886,12 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'v':
                 toggleVoiceRecognition();
                 break;
+            case 'l':
+                createLight();
+                break;
+            case 'b':
+                toggleAllLights();
+                break;
         }
     });
     
@@ -629,3 +918,7 @@ window.exportMarkers = exportMarkers;
 window.importMarkers = importMarkers;
 window.toggleVoiceRecognition = toggleVoiceRecognition;
 window.toggleMLMode = toggleMLMode;
+window.createLight = createLight;
+window.toggleAllLights = toggleAllLights;
+window.updateBrightness = updateBrightness;
+window.toggleLightDevice = toggleLightDevice;
