@@ -4,44 +4,19 @@
     <meta charset="UTF-8">
     <title>Smart Home XR Tour</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="styles.css">
     
     <!-- A-Frame та плагіни -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
     <!-- TensorFlow.js для ML -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.5.4/dist/speech-commands.min.js"></script>
     
-    <script src="script.js" defer></script>
+    <!-- Зовнішні стилі -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Кнопка меню -->
-    <button id="menu-toggle" onclick="toggleAllPanels()" title="Відкрити/Закрити меню">☰</button>
-
-    <!-- Контроль часу та освітлення -->
-    <div id="time-control" class="panel">
-        <h4>⏰ Час доби та освітлення</h4>
-        <div id="time-display">12:00</div>
-        <input type="range" id="time-slider" min="0" max="1439" value="720" oninput="updateTimeOfDay(this.value)">
-        <div class="time-preset">
-            <button onclick="setTimePreset(360)">🌅 Ранок (6:00)</button>
-            <button onclick="setTimePreset(540)">☀️ День (9:00)</button>
-            <button onclick="setTimePreset(720)">🌞 Полудень (12:00)</button>
-            <button onclick="setTimePreset(1080)">🌇 Вечір (18:00)</button>
-            <button onclick="setTimePreset(1320)">🌙 Ніч (22:00)</button>
-        </div>
-        <div class="light-info">
-            <div class="light-status">
-                <div class="light-indicator" id="light-indicator"></div>
-                <span>Інтенсивність: <span id="light-intensity">100%</span></span>
-            </div>
-            <div>Колір: <span id="light-color">#ffffff</span></div>
-            <div>Режим: <span id="light-mode">Денний</span></div>
-        </div>
-    </div>
-
     <!-- Панель керування -->
     <div id="controls-panel">
         <div class="control-group">
@@ -107,7 +82,7 @@
     </div>
 
     <!-- Панель голосового керування -->
-    <div id="voice-control" class="panel">
+    <div id="voice-control">
         <h3>🎤 Голосове керування</h3>
         <button id="voice-btn" onclick="toggleVoiceRecognition()">
             <span id="voice-btn-text">Почати розпізнавання</span>
@@ -124,70 +99,24 @@
     </div>
 
     <!-- XR сцена -->
-    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100" id="main-scene">
+    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <!-- Асети -->
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
-            <!-- Додайте шрифти тут -->
-            <a-asset-item id="arialFont" src="fonts/arial-msdf.json"></a-asset-item>
-            <img id="arialFontTexture" src="fonts/arial-msdf.png">
         </a-assets>
 
         <!-- Освітлення -->
-        <a-light type="ambient" intensity="0.3" color="#ffffff" id="ambient-light"></a-light>
-        <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true" 
-                 id="sun-light" color="#ffffff"></a-light>
-        
-        <!-- Додаткові джерела світла для кімнат -->
-        <a-entity id="room-lights">
-            <!-- Світло кімнати 1 -->
-            <a-light type="point" position="5 8 5" intensity="0" color="#ffd700" 
-                     distance="20" decay="2" id="room-light-1"></a-light>
-            <!-- Світло кімнати 2 -->
-            <a-light type="point" position="-5 8 5" intensity="0" color="#ffd700" 
-                     distance="20" decay="2" id="room-light-2"></a-light>
-            <!-- Світло кімнати 3 -->
-            <a-light type="point" position="5 8 -5" intensity="0" color="#ffd700" 
-                     distance="20" decay="2" id="room-light-3"></a-light>
-            <!-- Світло кімнати 4 -->
-            <a-light type="point" position="-5 8 -5" intensity="0" color="#ffd700" 
-                     distance="20" decay="2" id="room-light-4"></a-light>
-        </a-entity>
-
-        <!-- Небо з динамічним кольором -->
-        <a-sky id="sky" color="#87CEEB"></a-sky>
+        <a-light type="ambient" intensity="0.6"></a-light>
+        <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
 
         <!-- Грунт -->
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
-                 color="#4a5d4a" shadow="receive: true" id="ground"></a-plane>
+                 color="#4a5d4a" shadow="receive: true"></a-plane>
 
         <!-- Будинок -->
         <a-gltf-model src="#house-model" position="0 0 0" scale="1 1 1" rotation="0 0 0"
                       shadow="cast: true; receive: true" id="house">
         </a-gltf-model>
-
-        <!-- Вікна та ролети -->
-        <a-entity id="windows-blinds">
-            <!-- Вікно 1 з ролетою -->
-            <a-entity position="10 5 0">
-                <a-box width="3" height="4" depth="0.1" color="#87ceeb" opacity="0.3"></a-box>
-                <a-box id="blind-1" class="blind" width="3" height="4" depth="0.2" 
-                       position="0 2 0.2" color="#8b4513" opacity="0.9"
-                       animation__close="property: position; to: 0 0 0.2; dur: 2000; startEvents: close-blind"
-                       animation__open="property: position; to: 0 2 0.2; dur: 2000; startEvents: open-blind">
-                </a-box>
-            </a-entity>
-            
-            <!-- Вікно 2 з ролетою -->
-            <a-entity position="-10 5 0">
-                <a-box width="3" height="4" depth="0.1" color="#87ceeb" opacity="0.3"></a-box>
-                <a-box id="blind-2" class="blind" width="3" height="4" depth="0.2" 
-                       position="0 2 0.2" color="#8b4513" opacity="0.9"
-                       animation__close="property: position; to: 0 0 0.2; dur: 2000; startEvents: close-blind"
-                       animation__open="property: position; to: 0 2 0.2; dur: 2000; startEvents: open-blind">
-                </a-box>
-            </a-entity>
-        </a-entity>
 
         <!-- Камера -->
         <a-entity id="rig" position="0 10 20" movement-controls="fly: false;">
@@ -217,10 +146,12 @@
                     position="0 1 0"
                     width="4"
                     align="center"
-                    color="#fff"
-                    font="arialFont">
+                    color="#fff">
             </a-text>
         </a-entity>
     </a-scene>
+
+    <!-- Зовнішні скрипти -->
+    <script src="script.js"></script>
 </body>
 </html>

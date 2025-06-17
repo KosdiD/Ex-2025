@@ -7,434 +7,8 @@ let voiceRecognition = null;
 let isListening = false;
 let useMLModel = false;
 let speechModel = null;
-let currentTimeMinutes = 720; // 12:00
-let lightingSystem = {
-    autoMode: true,
-    roomLights: {
-        'room-light-1': { on: false, intensity: 1, color: '#ffd700' },
-        'room-light-2': { on: false, intensity: 1, color: '#ffd700' },
-        'room-light-3': { on: false, intensity: 1, color: '#ffd700' },
-        'room-light-4': { on: false, intensity: 1, color: '#ffd700' }
-    },
-    customLights: {},
-    zones: {},
-    blindsOpen: true
-};
-let lightCounter = 5;
-let zoneCounter = 1;
 
-// Параметри освітлення для різного часу доби
-const lightingPresets = {
-    night: { // 0:00 - 5:00
-        ambient: 0.1,
-        sun: 0,
-        skyColor: '#0a0a2e',
-        fogColor: '#0a0a2e',
-        roomLights: 0.8,
-        lightColor: '#ff9f40',
-        mode: 'Нічний'
-    },
-    dawn: { // 5:00 - 7:00
-        ambient: 0.3,
-        sun: 0.3,
-        skyColor: '#ff6b6b',
-        fogColor: '#ff6b6b',
-        roomLights: 0.5,
-        lightColor: '#ffd93d',
-        mode: 'Світанок'
-    },
-    morning: { // 7:00 - 10:00
-        ambient: 0.5,
-        sun: 0.6,
-        skyColor: '#87ceeb',
-        fogColor: '#87ceeb',
-        roomLights: 0.2,
-        lightColor: '#ffffff',
-        mode: 'Ранок'
-    },
-    day: { // 10:00 - 17:00
-        ambient: 0.6,
-        sun: 1.0,
-        skyColor: '#87ceeb',
-        fogColor: '#87ceeb',
-        roomLights: 0,
-        lightColor: '#ffffff',
-        mode: 'День'
-    },
-    evening: { // 17:00 - 20:00
-        ambient: 0.4,
-        sun: 0.5,
-        skyColor: '#ff7f50',
-        fogColor: '#ff7f50',
-        roomLights: 0.6,
-        lightColor: '#ffb347',
-        mode: 'Вечір'
-    },
-    dusk: { // 20:00 - 22:00
-        ambient: 0.2,
-        sun: 0.1,
-        skyColor: '#4b0082',
-        fogColor: '#4b0082',
-        roomLights: 0.9,
-        lightColor: '#ffa500',
-        mode: 'Сутінки'
-    },
-    lateNight: { // 22:00 - 24:00
-        ambient: 0.15,
-        sun: 0,
-        skyColor: '#191970',
-        fogColor: '#191970',
-        roomLights: 1.0,
-        lightColor: '#ff8c00',
-        mode: 'Пізня ніч'
-    }
-};
-
-// Зареєструйте шрифти при завантаженні сцени
-
-        
-        AFRAME.assets.loadAsset({
-            src: `${fontPath}calibri-msdf.json`,
-            id: 'calibriFont'
-        });
-    }
-});
-
-// Додайте компонент до сцени
-
-
-// Функція оновлення часу доби
-function updateTimeOfDay(minutes) {
-    currentTimeMinutes = parseInt(minutes);
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    
-    // Оновлюємо відображення часу
-    document.getElementById('time-display').textContent = 
-        `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-    
-    // Визначаємо пресет освітлення
-    let preset;
-    if (hours >= 0 && hours < 5) preset = lightingPresets.night;
-    else if (hours >= 5 && hours < 7) preset = lightingPresets.dawn;
-    else if (hours >= 7 && hours < 10) preset = lightingPresets.morning;
-    else if (hours >= 10 && hours < 17) preset = lightingPresets.day;
-    else if (hours >= 17 && hours < 20) preset = lightingPresets.evening;
-    else if (hours >= 20 && hours < 22) preset = lightingPresets.dusk;
-    else preset = lightingPresets.lateNight;
-    
-    // Застосовуємо освітлення
-    applyLighting(preset);
-    
-    // Оновлюємо позицію сонця
-    updateSunPosition(hours);
-}
-
-// Застосування параметрів освітлення
-function applyLighting(preset) {
-    // Ambient світло
-    const ambientLight = document.getElementById('ambient-light');
-    ambientLight.setAttribute('intensity', preset.ambient);
-    ambientLight.setAttribute('color', preset.lightColor);
-    
-    // Сонячне світло
-    const sunLight = document.getElementById('sun-light');
-    sunLight.setAttribute('intensity', preset.sun);
-    sunLight.setAttribute('color', preset.lightColor);
-    
-    // Небо та туман
-    const sky = document.getElementById('sky');
-    sky.setAttribute('color', preset.skyColor);
-    
-    const scene = document.getElementById('main-scene');
-    scene.setAttribute('fog', `type: linear; color: ${preset.fogColor}; near: 10; far: 100`);
-    
-    // Кімнатні світла
-    if (lightingSystem.autoMode) {
-        Object.keys(lightingSystem.roomLights).forEach(lightId => {
-            const light = document.getElementById(lightId);
-            light.setAttribute('intensity', preset.roomLights);
-            light.setAttribute('color', preset.lightColor);
-        });
-    }
-    
-    // Оновлюємо інформацію
-    document.getElementById('light-intensity').textContent = 
-        Math.round(preset.roomLights * 100) + '%';
-    document.getElementById('light-color').textContent = preset.lightColor;
-    document.getElementById('light-mode').textContent = preset.mode;
-    
-    // Оновлюємо індикатор
-    const indicator = document.getElementById('light-indicator');
-    indicator.style.background = preset.lightColor;
-    indicator.style.boxShadow = `0 0 ${preset.roomLights * 20}px ${preset.lightColor}`;
-}
-
-// Оновлення позиції сонця
-function updateSunPosition(hours) {
-    const sunLight = document.getElementById('sun-light');
-    const angle = (hours / 24) * Math.PI * 2 - Math.PI / 2;
-    const distance = 40;
-    
-    const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance + 20;
-    const z = 20;
-    
-    sunLight.setAttribute('position', `${x} ${Math.max(5, y)} ${z}`);
-}
-
-// Встановлення пресету часу
-function setTimePreset(minutes) {
-    document.getElementById('time-slider').value = minutes;
-    updateTimeOfDay(minutes);
-}
-
-// Створення світла в поточній позиції
-function createLightAtCurrentPosition() {
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    const lightId = `custom-light-${lightCounter}`;
-    const lightPos = `${pos.x} ${pos.y + 2} ${pos.z}`;
-    
-    // Створюємо світло
-    const light = document.createElement('a-light');
-    light.setAttribute('id', lightId);
-    light.setAttribute('type', 'point');
-    light.setAttribute('position', lightPos);
-    light.setAttribute('intensity', '0.8');
-    light.setAttribute('color', '#ffd700');
-    light.setAttribute('distance', '15');
-    light.setAttribute('decay', '2');
-    
-    document.getElementById('room-lights').appendChild(light);
-    
-    // Створюємо маркер для світла
-    createLightMarker(lightPos, lightCounter);
-    
-    // Додаємо до системи освітлення
-    lightingSystem.customLights[lightId] = {
-        on: true,
-        intensity: 0.8,
-        color: '#ffd700'
-    };
-    
-    lightCounter++;
-    console.log(`💡 Створено нове світло на позиції: ${lightPos}`);
-}
-
-// Створення зони з автоматичним освітленням
-function createZoneAtCurrentPosition() {
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    const zoneId = `zone-${zoneCounter}`;
-    const zonePos = `${pos.x} ${pos.y} ${pos.z}`;
-    
-    // Створюємо візуалізацію зони
-    const zone = document.createElement('a-entity');
-    zone.setAttribute('id', zoneId);
-    zone.setAttribute('position', zonePos);
-    
-    // Підлога зони
-    const floor = document.createElement('a-cylinder');
-    floor.setAttribute('radius', '3');
-    floor.setAttribute('height', '0.1');
-    floor.setAttribute('color', '#00ff88');
-    floor.setAttribute('opacity', '0.3');
-    floor.setAttribute('position', '0 0 0');
-    
-    // Межі зони (невидимий циліндр для детекції)
-    const detector = document.createElement('a-cylinder');
-    detector.setAttribute('radius', '3');
-    detector.setAttribute('height', '10');
-    detector.setAttribute('opacity', '0');
-    detector.setAttribute('position', '0 5 0');
-    detector.setAttribute('class', 'zone-detector');
-    
-    // Текст зони
-    const text = document.createElement('a-text');
-    text.setAttribute('value', 'Зона ' + zoneCounter);
-    text.setAttribute('position', '0 0.5 0');
-    text.setAttribute('align', 'center');
-    text.setAttribute('color', '#fff');
-    text.setAttribute('font', 'arialFont');
-    
-    zone.appendChild(floor);
-    zone.appendChild(detector);
-    zone.appendChild(text);
-    document.querySelector('a-scene').appendChild(zone);
-    
-    // Додаємо зону до системи
-    lightingSystem.zones[zoneId] = {
-        position: {x: pos.x, y: pos.y, z: pos.z},
-        radius: 3,
-        lights: [`zone-light-${zoneCounter}`],
-        active: false,
-        enabled: true
-    };
-    
-    // Створюємо світло для зони
-    const zoneLight = document.createElement('a-light');
-    zoneLight.setAttribute('id', `zone-light-${zoneCounter}`);
-    zoneLight.setAttribute('type', 'point');
-    zoneLight.setAttribute('position', `${pos.x} ${pos.y + 5} ${pos.z}`);
-    zoneLight.setAttribute('intensity', '0');
-    zoneLight.setAttribute('color', '#ffffff');
-    zoneLight.setAttribute('distance', '10');
-    
-    document.getElementById('room-lights').appendChild(zoneLight);
-    
-    zoneCounter++;
-    console.log(`🚶 Створено автоматичну зону на позиції: ${zonePos}`);
-}
-
-// Перевірка позиції гравця в зонах
-function checkPlayerInZones() {
-    const camera = document.getElementById('camera');
-    const playerPos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    Object.entries(lightingSystem.zones).forEach(([zoneId, zone]) => {
-        if (!zone.enabled) return;
-        
-        const distance = Math.sqrt(
-            Math.pow(playerPos.x - zone.position.x, 2) +
-            Math.pow(playerPos.z - zone.position.z, 2)
-        );
-        
-        const inZone = distance <= zone.radius;
-        
-        if (inZone && !zone.active) {
-            // Увійшли в зону
-            zone.active = true;
-            zone.lights.forEach(lightId => {
-                const light = document.getElementById(lightId);
-                if (light) {
-                    light.setAttribute('intensity', '1');
-                    console.log(`💡 Світло в ${zoneId} увімкнено автоматично`);
-                }
-            });
-        } else if (!inZone && zone.active) {
-            // Вийшли з зони
-            zone.active = false;
-            zone.lights.forEach(lightId => {
-                const light = document.getElementById(lightId);
-                if (light) {
-                    light.setAttribute('intensity', '0');
-                    console.log(`💡 Світло в ${zoneId} вимкнено автоматично`);
-                }
-            });
-        }
-    });
-}
-
-// Керування ролетами
-function toggleBlinds() {
-    lightingSystem.blindsOpen = !lightingSystem.blindsOpen;
-    const blinds = document.querySelectorAll('.blind');
-    
-    blinds.forEach(blind => {
-        if (lightingSystem.blindsOpen) {
-            blind.emit('open-blind');
-        } else {
-            blind.emit('close-blind');
-        }
-    });
-    
-    console.log(`🪟 Ролети ${lightingSystem.blindsOpen ? 'відкрито' : 'закрито'}`);
-}
-
-// Вимкнення світла в зоні за ID
-function disableZone(zoneNumber) {
-    const zoneId = `zone-${zoneNumber}`;
-    if (lightingSystem.zones[zoneId]) {
-        lightingSystem.zones[zoneId].enabled = false;
-        lightingSystem.zones[zoneId].lights.forEach(lightId => {
-            const light = document.getElementById(lightId);
-            if (light) {
-                light.setAttribute('intensity', '0');
-            }
-        });
-        console.log(`🚶 Зона ${zoneNumber} вимкнена`);
-    }
-}
-
-// Увімкнення зони
-function enableZone(zoneNumber) {
-    const zoneId = `zone-${zoneNumber}`;
-    if (lightingSystem.zones[zoneId]) {
-        lightingSystem.zones[zoneId].enabled = true;
-        console.log(`🚶 Зона ${zoneNumber} увімкнена`);
-    }
-}
-
-// Створення світлового маркера
-function createLightMarker(position, roomId) {
-    const markerId = `light-marker-${roomId}`;
-    const container = document.createElement('a-entity');
-    container.setAttribute('id', markerId);
-    container.setAttribute('position', position);
-    
-    // Лампочка
-    const bulb = document.createElement('a-sphere');
-    bulb.setAttribute('class', 'iot-marker light-control');
-    bulb.setAttribute('radius', '0.3');
-    bulb.setAttribute('color', '#ffd700');
-    bulb.setAttribute('opacity', '0.8');
-    bulb.setAttribute('emissive', '#ffd700');
-    bulb.setAttribute('emissiveIntensity', '0.5');
-    
-    // Текст
-    const text = document.createElement('a-text');
-    text.setAttribute('value', 'Світло ' + roomId);
-    text.setAttribute('position', '0 0.7 0');
-    text.setAttribute('width', '3');
-    text.setAttribute('align', 'center');
-    text.setAttribute('color', '#fff');
-    text.setAttribute('font', 'arialFont');
-    
-    container.appendChild(bulb);
-    container.appendChild(text);
-    document.querySelector('a-scene').appendChild(container);
-    
-    // Обробник кліку для перемикання світла
-    bulb.addEventListener('click', function() {
-        toggleRoomLight(roomId);
-    });
-    
-    return container;
-}
-
-// Перемикання світла в кімнаті
-function toggleRoomLight(roomId) {
-    const lightId = `room-light-${roomId}`;
-    const customLightId = `custom-light-${roomId}`;
-    
-    let light, lightData;
-    
-    // Перевіряємо чи це стандартне чи кастомне світло
-    if (document.getElementById(lightId)) {
-        light = document.getElementById(lightId);
-        lightData = lightingSystem.roomLights[lightId];
-    } else if (document.getElementById(customLightId)) {
-        light = document.getElementById(customLightId);
-        lightData = lightingSystem.customLights[customLightId];
-    }
-    
-    if (light && lightData) {
-        lightData.on = !lightData.on;
-        
-        if (lightData.on) {
-            light.setAttribute('intensity', lightData.intensity);
-            console.log(`💡 Світло ${roomId} увімкнено`);
-        } else {
-            light.setAttribute('intensity', 0);
-            console.log(`💡 Світло ${roomId} вимкнено`);
-        }
-    }
-}
-
-// Голосові команди оголошені наново 1337
+// Голосові команди
 const voiceCommands = {
     'створити маркер': () => createMarkerAtCurrentPosition(),
     'створи маркер': () => createMarkerAtCurrentPosition(),
@@ -456,48 +30,6 @@ const voiceCommands = {
     'стоп': () => stopVoiceRecognition(),
     'зупинити': () => stopVoiceRecognition()
 };
-
-// Додаємо голосові команди для світла
-const lightVoiceCommands = {
-    'увімкни світло': () => {
-        Object.keys(lightingSystem.roomLights).forEach(lightId => {
-            const light = document.getElementById(lightId);
-            light.setAttribute('intensity', 1);
-            lightingSystem.roomLights[lightId].on = true;
-        });
-        console.log('💡 Все світло увімкнено');
-    },
-    'вимкни світло': () => {
-        Object.keys(lightingSystem.roomLights).forEach(lightId => {
-            const light = document.getElementById(lightId);
-            light.setAttribute('intensity', 0);
-            lightingSystem.roomLights[lightId].on = false;
-        });
-        console.log('💡 Все світло вимкнено');
-    },
-    'ранок': () => setTimePreset(360),
-    'день': () => setTimePreset(720),
-    'вечір': () => setTimePreset(1080),
-    'ніч': () => setTimePreset(1320),
-    'закрий ролети': () => {
-        if (lightingSystem.blindsOpen) toggleBlinds();
-    },
-    'відкрий ролети': () => {
-        if (!lightingSystem.blindsOpen) toggleBlinds();
-    },
-    'вимкни зону': () => {
-        // Вимикаємо активну зону
-        Object.entries(lightingSystem.zones).forEach(([zoneId, zone]) => {
-            if (zone.active) {
-                const zoneNum = zoneId.split('-')[1];
-                disableZone(zoneNum);
-            }
-        });
-    }
-};
-
-// Додаємо нові команди до існуючих
-Object.assign(voiceCommands, lightVoiceCommands);
 
 // Ініціалізація Web Speech API
 function initVoiceRecognition() {
@@ -732,11 +264,11 @@ const edgeMLTypes = {
         mlModels: ['Pose Detection', 'Activity Recognition'],
         features: ['Розпізнавання активності', 'Детекція падіння', 'Аналіз поведінки']
     },
-    smart: {
-        name: 'Розумне світло',
-        color: '#ffd700',
-        mlModels: ['Circadian Rhythm AI', 'Presence Detection'],
-        features: ['Автоматична адаптація', 'Циркадні ритми', 'Енергозбереження']
+    climate: {
+        name: 'Клімат контролер з ML',
+        color: '#dda0dd',
+        mlModels: ['Time Series Forecasting', 'Regression Models'],
+        features: ['Прогноз температури', 'Оптимізація енергії', 'Адаптивне навчання']
     }
 };
 
@@ -821,7 +353,6 @@ function saveMarker() {
     text.setAttribute('width', '4');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
-    text.setAttribute('font', 'arialFont');
     
     // Додаємо іконку ML якщо це ML пристрій
     if (mlType) {
@@ -893,154 +424,13 @@ function closeIotPanel() {
     document.getElementById('iot-info-panel').classList.remove('active');
 }
 
-// Функція для випадаючих секцій
-function toggleSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    const collapsible = section.previousElementSibling;
-    
-    section.classList.toggle('show');
-    collapsible.classList.toggle('active');
-}
-
-// Створення вікна з ролетою
-function createWindowWithBlind() {
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    const windowId = `window-${windowCounter}`;
-    const blindId = `blind-${windowCounter}`;
-    
-    const windowEntity = document.createElement('a-entity');
-    windowEntity.setAttribute('id', windowId);
-    windowEntity.setAttribute('position', `${pos.x} ${pos.y + 2} ${pos.z}`);
-    
-    // Вікно
-    const window = document.createElement('a-box');
-    window.setAttribute('width', '3');
-    window.setAttribute('height', '4');
-    window.setAttribute('depth', '0.1');
-    window.setAttribute('color', '#87ceeb');
-    window.setAttribute('opacity', '0.3');
-    
-    // Ролета
-    const blind = document.createElement('a-box');
-    blind.setAttribute('id', blindId);
-    blind.setAttribute('class', 'blind');
-    blind.setAttribute('width', '3');
-    blind.setAttribute('height', '4');
-    blind.setAttribute('depth', '0.2');
-    blind.setAttribute('position', '0 2 0.2');
-    blind.setAttribute('color', '#8b4513');
-    blind.setAttribute('opacity', '0.9');
-    blind.setAttribute('animation__close', 'property: position; to: 0 0 0.2; dur: 2000; startEvents: close-blind');
-    blind.setAttribute('animation__open', 'property: position; to: 0 2 0.2; dur: 2000; startEvents: open-blind');
-    
-    windowEntity.appendChild(window);
-    windowEntity.appendChild(blind);
-    document.getElementById('windows-blinds').appendChild(windowEntity);
-    
-    windowCounter++;
-    console.log(`🪟 Створено вікно з ролетою на позиції: ${pos.x}, ${pos.y + 2}, ${pos.z}`);
-}
-
-// Перемикання всього світла
-function toggleAllLights() {
-    const allLights = {...lightingSystem.roomLights, ...lightingSystem.customLights};
-    const anyOn = Object.values(allLights).some(l => l.on);
-    
-    Object.entries(allLights).forEach(([lightId, lightData]) => {
-        const light = document.getElementById(lightId);
-        if (light) {
-            if (anyOn) {
-                light.setAttribute('intensity', 0);
-                lightData.on = false;
-            } else {
-                light.setAttribute('intensity', lightData.intensity);
-                lightData.on = true;
-            }
-        }
-    });
-    
-    console.log(`💡 Все світло ${anyOn ? 'вимкнено' : 'увімкнено'}`);
-}
-
-
+// Експорт маркерів
 function exportMarkers() {
-    const data = {
+    const exportData = {
         version: '1.0',
         exportDate: new Date().toISOString(),
         devices: deviceData,
         markerCounter: markerCounter
-    };
-
-    const dataStr = JSON.stringify(data, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `markers-export-${Date.now()}.json`;
-    link.click();
-
-    console.log('✅ Маркери експортовано');
-}
-
-function importMarkers(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importData = JSON.parse(e.target.result);
-            deviceData = {...importData.devices};
-            markerCounter = importData.markerCounter || Object.keys(deviceData).length;
-
-            // Видалити старі маркери (крім дефолтних)
-            Object.keys(deviceData).forEach(markerId => {
-                if (!defaultDevices[markerId]) {
-                    const element = document.getElementById(markerId);
-                    if (element) element.remove();
-                }
-            });
-
-            // Створити нові маркери
-            Object.entries(deviceData).forEach(([markerId, device]) => {
-                if (!defaultDevices[markerId]) {
-                    createMarkerFromData(markerId, device);
-                }
-            });
-
-            console.log('✅ Маркери імпортовано');
-        } catch (error) {
-            console.error('❌ Помилка імпорту:', error);
-        }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-}
-
-// Експорт всього
-function exportAll() {
-    const exportData = {
-        version: '2.0',
-        exportDate: new Date().toISOString(),
-        devices: deviceData,
-        markerCounter: markerCounter,
-        lights: {
-            system: lightingSystem,
-            counter: lightCounter
-        },
-        zones: {
-            data: lightingSystem.zones,
-            counter: zoneCounter
-        },
-        windows: {
-            counter: windowCounter,
-            blindsOpen: lightingSystem.blindsOpen
-        },
-        timeSettings: {
-            currentTime: currentTimeMinutes
-        }
     };
     
     const dataStr = JSON.stringify(exportData, null, 2);
@@ -1048,14 +438,14 @@ function exportAll() {
     
     const link = document.createElement('a');
     link.href = URL.createObjectURL(dataBlob);
-    link.download = `smart-home-complete-${Date.now()}.json`;
+    link.download = `smart-home-iot-markers-${Date.now()}.json`;
     link.click();
     
-    console.log('✅ Експортовано всю конфігурацію');
+    console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів');
 }
 
-// Імпорт всього
-function importAll(event) {
+// Імпорт маркерів
+function importMarkers(event) {
     const file = event.target.files[0];
     if (!file) return;
     
@@ -1064,167 +454,37 @@ function importAll(event) {
         try {
             const importData = JSON.parse(e.target.result);
             
-            // Очищаємо існуючі елементи
-            clearAllElements();
+            // Видаляємо всі існуючі маркери (крім дефолтних)
+            Object.keys(deviceData).forEach(markerId => {
+                if (!defaultDevices[markerId]) {
+                    const element = document.getElementById(markerId);
+                    if (element) element.remove();
+                }
+            });
             
-            // Імпортуємо маркери
-            if (importData.devices) {
-                deviceData = {...importData.devices};
-                markerCounter = importData.markerCounter || Object.keys(deviceData).length;
-                
-                Object.entries(deviceData).forEach(([markerId, device]) => {
-                    if (!defaultDevices[markerId]) {
-                        createMarkerFromData(markerId, device);
-                    }
-                });
-            }
+            // Завантажуємо нові дані
+            deviceData = {...importData.devices};
+            markerCounter = importData.markerCounter || Object.keys(deviceData).length;
             
-            // Імпортуємо світло
-            if (importData.lights) {
-                lightingSystem = {...lightingSystem, ...importData.lights.system};
-                lightCounter = importData.lights.counter || 5;
-                
-                // Створюємо кастомні світла
-                Object.entries(importData.lights.system.customLights || {}).forEach(([lightId, lightData]) => {
-                    const lightNum = lightId.split('-')[2];
-                    createImportedLight(lightNum, lightData);
-                });
-            }
+            // Створюємо маркери зі збережених даних
+            Object.entries(deviceData).forEach(([markerId, device]) => {
+                if (!defaultDevices[markerId]) {
+                    createMarkerFromData(markerId, device);
+                }
+            });
             
-            // Імпортуємо зони
-            if (importData.zones) {
-                zoneCounter = importData.zones.counter || 1;
-                
-                Object.entries(importData.zones.data || {}).forEach(([zoneId, zoneData]) => {
-                    createImportedZone(zoneId, zoneData);
-                });
-            }
-            
-            // Імпортуємо налаштування часу
-            if (importData.timeSettings) {
-                setTimePreset(importData.timeSettings.currentTime);
-            }
-            
-            console.log('✅ Імпортовано всю конфігурацію');
-            alert('Конфігурація успішно імпортована!');
+            console.log('✅ Імпортовано', Object.keys(deviceData).length, 'маркерів');
+            alert('Маркери успішно імпортовано!');
             
         } catch (error) {
             console.error('❌ Помилка імпорту:', error);
-            alert('Помилка при імпорті файлу');
+            alert('Помилка при імпорті файлу. Перевірте формат файлу.');
         }
     };
     reader.readAsText(file);
+    
+    // Очищаємо input для можливості повторного вибору того ж файлу
     event.target.value = '';
-}
-
-// Очищення всіх елементів
-function clearAllElements() {
-    // Видаляємо маркери
-    Object.keys(deviceData).forEach(markerId => {
-        if (!defaultDevices[markerId]) {
-            const element = document.getElementById(markerId);
-            if (element) element.remove();
-        }
-    });
-    
-    // Видаляємо кастомні світла
-    Object.keys(lightingSystem.customLights).forEach(lightId => {
-        const element = document.getElementById(lightId);
-        if (element) element.remove();
-        const markerId = `light-marker-${lightId.split('-')[2]}`;
-        const marker = document.getElementById(markerId);
-        if (marker) marker.remove();
-    });
-    
-    // Видаляємо зони
-    Object.keys(lightingSystem.zones).forEach(zoneId => {
-        const element = document.getElementById(zoneId);
-        if (element) element.remove();
-        const lightId = `zone-light-${zoneId.split('-')[1]}`;
-        const light = document.getElementById(lightId);
-        if (light) light.remove();
-    });
-}
-
-// Створення імпортованого світла
-function createImportedLight(lightNum, lightData) {
-    // Створюємо світло
-    const lightId = `custom-light-${lightNum}`;
-    const light = document.createElement('a-light');
-    light.setAttribute('id', lightId);
-    light.setAttribute('type', 'point');
-    light.setAttribute('position', `0 7 0`); // Дефолтна позиція
-    light.setAttribute('intensity', lightData.on ? lightData.intensity : 0);
-    light.setAttribute('color', lightData.color);
-    light.setAttribute('distance', '15');
-    light.setAttribute('decay', '2');
-    
-    document.getElementById('room-lights').appendChild(light);
-    
-    // Створюємо маркер
-    createLightMarker('0 5 0', lightNum);
-}
-
-// Створення імпортованої зони
-function createImportedZone(zoneId, zoneData) {
-    const zone = document.createElement('a-entity');
-    zone.setAttribute('id', zoneId);
-    zone.setAttribute('position', `${zoneData.position.x} ${zoneData.position.y} ${zoneData.position.z}`);
-    
-    // Візуалізація зони
-    const floor = document.createElement('a-cylinder');
-    floor.setAttribute('radius', zoneData.radius);
-    floor.setAttribute('height', '0.1');
-    floor.setAttribute('color', '#00ff88');
-    floor.setAttribute('opacity', '0.3');
-    
-    const text = document.createElement('a-text');
-    text.setAttribute('value', 'Зона ' + zoneId.split('-')[1]);
-    text.setAttribute('position', '0 0.5 0');
-    text.setAttribute('align', 'center');
-    text.setAttribute('font', 'arialFont');
-    
-    zone.appendChild(floor);
-    zone.appendChild(text);
-    document.querySelector('a-scene').appendChild(zone);
-    
-    // Створюємо світло для зони
-    zoneData.lights.forEach(lightId => {
-        const light = document.createElement('a-light');
-        light.setAttribute('id', lightId);
-        light.setAttribute('type', 'point');
-        light.setAttribute('position', `${zoneData.position.x} ${zoneData.position.y + 5} ${zoneData.position.z}`);
-        light.setAttribute('intensity', '0');
-        light.setAttribute('color', '#ffffff');
-        
-        document.getElementById('room-lights').appendChild(light);
-    });
-}
-
-// Експорт окремих елементів
-function exportLights() {
-    const data = {
-        lights: lightingSystem.customLights,
-        counter: lightCounter
-    };
-    downloadJSON(data, 'lights-export');
-}
-
-function exportZones() {
-    const data = {
-        zones: lightingSystem.zones,
-        counter: zoneCounter
-    };
-    downloadJSON(data, 'zones-export');
-}
-
-function downloadJSON(data, prefix) {
-    const dataStr = JSON.stringify(data, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `${prefix}-${Date.now()}.json`;
-    link.click();
 }
 
 // Створення маркера з даних
@@ -1261,7 +521,6 @@ function createMarkerFromData(markerId, device) {
     text.setAttribute('width', '4');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
-    text.setAttribute('font', 'arialFont');
     
     // Додаємо іконку ML якщо це ML пристрій
     if (device.mlType) {
@@ -1312,22 +571,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Smart Home XR Tour завантажено');
     setHeight();
     
-    // Ініціалізація освітлення
-    updateTimeOfDay(currentTimeMinutes);
-    
-    // Створюємо маркери світла для кімнат
-    setTimeout(() => {
-        createLightMarker('5 5 5', '1');
-        createLightMarker('-5 5 5', '2');
-        createLightMarker('5 5 -5', '3');
-        createLightMarker('-5 5 -5', '4');
-    }, 1000);
-    
     // Оновлення позиції кожні 100мс
     setInterval(updatePositionDisplay, 100);
-    
-    // Перевірка зон кожні 200мс
-    setInterval(checkPlayerInZones, 200);
     
     // Обробник для початкового маркера
     const initialMarker = document.querySelector('#marker-0-0-0 .iot-marker');
@@ -1339,10 +584,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обробка клавіш
     document.addEventListener('keydown', (e) => {
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-        
-        e.stopPropagation();
-        
         switch(e.key.toLowerCase()) {
             case 'q':
                 changeHeight(1);
@@ -1361,21 +602,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'v':
                 toggleVoiceRecognition();
-                break;
-            case 'l':
-                const allOn = Object.values(lightingSystem.roomLights).some(l => l.on);
-                if (allOn) {
-                    voiceCommands['вимкни світло']();
-                } else {
-                    voiceCommands['увімкни світло']();
-                }
-                break;
-            case 'b':
-                toggleBlinds();
-                break;
-            case 'tab':
-                e.preventDefault();
-                toggleAllPanels();
                 break;
         }
     });
@@ -1403,17 +629,3 @@ window.exportMarkers = exportMarkers;
 window.importMarkers = importMarkers;
 window.toggleVoiceRecognition = toggleVoiceRecognition;
 window.toggleMLMode = toggleMLMode;
-window.updateTimeOfDay = updateTimeOfDay;
-window.setTimePreset = setTimePreset;
-window.toggleRoomLight = toggleRoomLight;
-window.createLightAtCurrentPosition = createLightAtCurrentPosition;
-window.createZoneAtCurrentPosition = createZoneAtCurrentPosition;
-window.toggleBlinds = toggleBlinds;
-window.toggleSection = toggleSection;
-window.createWindowWithBlind = createWindowWithBlind;
-window.toggleAllLights = toggleAllLights;
-window.exportAll = exportAll;
-window.importAll = importAll;
-window.exportLights = exportLights;
-window.exportZones = exportZones;
-window.toggleAllPanels = toggleAllPanels;
