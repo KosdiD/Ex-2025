@@ -20,12 +20,48 @@
             font-family: sans-serif;
         }
 
-        #controls-panel {
-            position: absolute;
+        #menu-toggle {
+            position: fixed;
             top: 20px;
             left: 20px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.8);
+            z-index: 10001;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            width: 50px;
+            height: 50px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+
+        #menu-toggle:hover {
+            background: #ff5252;
+            transform: scale(1.1);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        #menu-toggle.active {
+            background: #4ecdc4;
+        }
+
+        .panel {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .panel.hidden {
+            display: none !important;
+        }
+
+        #controls-panel {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 15px;
             border-radius: 10px;
@@ -33,6 +69,7 @@
             max-width: 300px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         #controls-panel button {
@@ -157,15 +194,16 @@
         }
 
         #voice-control {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 15px;
             border-radius: 10px;
-            z-index: 1000;
+            z-index: 10000;
             max-width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         #voice-control button {
@@ -231,8 +269,11 @@
     </style>
 </head>
 <body>
+    <!-- Кнопка меню -->
+    <button id="menu-toggle" onclick="toggleAllPanels()" title="Відкрити/Закрити меню">☰</button>
+
     <!-- Контроль часу та освітлення -->
-    <div id="time-control">
+    <div id="time-control" class="panel">
         <h4>⏰ Час доби та освітлення</h4>
         <div id="time-display">12:00</div>
         <input type="range" id="time-slider" min="0" max="1439" value="720" oninput="updateTimeOfDay(this.value)">
@@ -318,7 +359,7 @@
     </div>
 
     <!-- Панель голосового керування -->
-    <div id="voice-control">
+    <div id="voice-control" class="panel">
         <h3>🎤 Голосове керування</h3>
         <button id="voice-btn" onclick="toggleVoiceRecognition()">
             <span id="voice-btn-text">Почати розпізнавання</span>
@@ -425,7 +466,8 @@
                     position="0 1 0"
                     width="4"
                     align="center"
-                    color="#fff">
+                    color="#fff"
+                    font="kelsonsans">
             </a-text>
         </a-entity>
     </a-scene>
@@ -674,10 +716,11 @@
             
             // Текст зони
             const text = document.createElement('a-text');
-            text.setAttribute('value', `Зона ${zoneCounter}`);
+            text.setAttribute('value', 'Зона ' + zoneCounter);
             text.setAttribute('position', '0 0.5 0');
             text.setAttribute('align', 'center');
             text.setAttribute('color', '#fff');
+            text.setAttribute('font', 'kelsonsans');
             
             zone.appendChild(floor);
             zone.appendChild(detector);
@@ -805,11 +848,12 @@
             
             // Текст
             const text = document.createElement('a-text');
-            text.setAttribute('value', `💡 Світло ${roomId}`);
+            text.setAttribute('value', 'Світло ' + roomId);
             text.setAttribute('position', '0 0.7 0');
             text.setAttribute('width', '3');
             text.setAttribute('align', 'center');
             text.setAttribute('color', '#fff');
+            text.setAttribute('font', 'kelsonsans');
             
             container.appendChild(bulb);
             container.appendChild(text);
@@ -1239,6 +1283,7 @@
             text.setAttribute('width', '4');
             text.setAttribute('align', 'center');
             text.setAttribute('color', '#fff');
+            text.setAttribute('font', 'kelsonsans');
             
             // Додаємо іконку ML якщо це ML пристрій
             if (mlType) {
@@ -1541,9 +1586,10 @@
             floor.setAttribute('opacity', '0.3');
             
             const text = document.createElement('a-text');
-            text.setAttribute('value', `Зона ${zoneId.split('-')[1]}`);
+            text.setAttribute('value', 'Зона ' + zoneId.split('-')[1]);
             text.setAttribute('position', '0 0.5 0');
             text.setAttribute('align', 'center');
+            text.setAttribute('font', 'kelsonsans');
             
             zone.appendChild(floor);
             zone.appendChild(text);
@@ -1622,6 +1668,7 @@
             text.setAttribute('width', '4');
             text.setAttribute('align', 'center');
             text.setAttribute('color', '#fff');
+            text.setAttribute('font', 'kelsonsans');
             
             // Додаємо іконку ML якщо це ML пристрій
             if (device.mlType) {
@@ -1731,6 +1778,11 @@
                         // Перемикання ролетів
                         toggleBlinds();
                         break;
+                    case 'Tab':
+                        // Перемикання меню
+                        e.preventDefault();
+                        toggleAllPanels();
+                        break;
                 }
             });
             
@@ -1769,7 +1821,8 @@
         window.exportAll = exportAll;
         window.importAll = importAll;
         window.exportLights = exportLights;
-        window.exportZones = exportZones;ition = toggleVoiceRecognition;
+        window.exportZones = exportZones;
+        window.toggleAllPanels = toggleAllPanels;ition = toggleVoiceRecognition;
         window.toggleMLMode = toggleMLMode;
         window.updateTimeOfDay = updateTimeOfDay;
         window.setTimePreset = setTimePreset;
