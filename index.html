@@ -29,6 +29,17 @@
         </div>
 
         <div class="control-group">
+            <strong>💡 Керування світлом:</strong><br>
+            <button onclick="createLight()">➕ Створити світло</button>
+            <button onclick="toggleAllLights()">💡 Увімк/Вимк всі</button>
+            <div class="brightness-control">
+                <label>Яскравість:</label>
+                <input type="range" id="brightness-slider" min="0" max="100" value="50" onchange="updateBrightness(this.value)">
+                <span id="brightness-value">50%</span>
+            </div>
+        </div>
+
+        <div class="control-group">
             <strong>📍 Створення маркерів:</strong><br>
             <button onclick="createMarkerAtCurrentPosition()">Створити маркер тут</button>
             <div id="marker-form" style="display: none;">
@@ -39,6 +50,7 @@
                     <option value="sensor">📊 Сенсорна аналітика</option>
                     <option value="motion">🏃 Детектор руху</option>
                     <option value="climate">🌡️ Клімат ML</option>
+                    <option value="light">💡 Розумне світло</option>
                 </select>
                 <input type="text" id="marker-name" placeholder="Назва пристрою">
                 <textarea id="marker-description" placeholder="Опис пристрою" rows="3"></textarea>
@@ -78,6 +90,11 @@
         <p><span class="info-label">ML Функції:</span> <span id="iot-ml-features">-</span></p>
         <p><span class="info-label">Статус:</span> <span id="iot-status">Активний</span></p>
         <p><span class="info-label">Координати:</span> <span id="iot-coords">-</span></p>
+        <div id="light-controls" style="display: none;">
+            <p><span class="info-label">Стан світла:</span> <span id="light-state">Вимкнено</span></p>
+            <p><span class="info-label">Яскравість:</span> <span id="light-brightness">50%</span></p>
+            <button onclick="toggleLightDevice()">💡 Увімк/Вимк</button>
+        </div>
         <button onclick="closeIotPanel()">Закрити</button>
     </div>
 
@@ -95,7 +112,7 @@
             <span id="voice-status-text">Готово до роботи</span>
             <div id="voice-transcript"></div>
         </div>
-        <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз"</small>
+        <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
     </div>
 
     <!-- XR сцена -->
@@ -106,7 +123,7 @@
         </a-assets>
 
         <!-- Освітлення -->
-        <a-light type="ambient" intensity="0.6"></a-light>
+        <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
         <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
 
         <!-- Грунт -->
@@ -146,7 +163,8 @@
                     position="0 1 0"
                     width="4"
                     align="center"
-                    color="#fff">
+                    color="#fff"
+                    font="../fonts/calibri-msdf.json">
             </a-text>
         </a-entity>
     </a-scene>
