@@ -613,12 +613,40 @@ function closeIotPanel() {
 }
 
 // Експорт маркерів
+// Експорт маркерів
 function exportMarkers() {
+    // Підготовка даних для експорту без циклічних посилань
+    const cleanDeviceData = {};
+    Object.entries(deviceData).forEach(([id, device]) => {
+        cleanDeviceData[id] = {
+            name: device.name,
+            type: device.type,
+            description: device.description,
+            position: device.position,
+            mlType: device.mlType,
+            mlModels: device.mlModels,
+            mlFeatures: device.mlFeatures,
+            isLight: device.isLight
+        };
+    });
+    
+    const cleanLightDevices = {};
+    Object.entries(lightDevices).forEach(([id, light]) => {
+        cleanLightDevices[id] = {
+            id: light.id,
+            name: light.name,
+            position: light.position,
+            isOn: light.isOn,
+            brightness: light.brightness,
+            isMarker: light.isMarker
+        };
+    });
+    
     const exportData = {
         version: '1.0',
         exportDate: new Date().toISOString(),
-        devices: deviceData,
-        lights: lightDevices,
+        devices: cleanDeviceData,
+        lights: cleanLightDevices,
         markerCounter: markerCounter,
         lightCounter: lightCounter,
         globalBrightness: globalBrightness
@@ -635,6 +663,7 @@ function exportMarkers() {
     console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів та', Object.keys(lightDevices).length, 'світлових пристроїв');
 }
 
+// Імпорт маркерів
 // Імпорт маркерів
 function importMarkers(event) {
     const file = event.target.files[0];
@@ -654,14 +683,23 @@ function importMarkers(event) {
             });
             
             // Видаляємо всі світла
-            Object.keys(lightDevices).forEach(lightId => {
-                const light = lightDevices[lightId];
-                if (light.element) light.element.remove();
+            Object.values(lightDevices).forEach(light => {
+                if (light.element) {
+                    light.element.remove();
+                }
             });
             lightDevices = {};
             
+            // Очищаємо deviceData
+            deviceData = {...defaultDevices};
+            
             // Завантажуємо нові дані
-            deviceData = {...importData.devices};
+            if (importData.devices) {
+                Object.entries(importData.devices).forEach(([markerId, device]) => {
+                    deviceData[markerId] = device;
+                });
+            }
+            
             markerCounter = importData.markerCounter || Object.keys(deviceData).length;
             lightCounter = importData.lightCounter || 1;
             
