@@ -2,10 +2,9 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Home XR Tour</title>
+    <title>Smart Home XR Tour with NavMesh</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <!-- Використовуємо версію A-Frame 1.5.0, яка є стабільною з aframe-extras -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
@@ -110,34 +109,40 @@
         <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
     </div>
 
-    <!-- Налаштування сцени з фізикою -->
-    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100" physics="debug: true; driver: local;">
+    <!-- Сцена БЕЗ фізики, але з NavMesh -->
+    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
-            <a-asset-item id="invisible-walls" src="outbound.glb"></a-asset-item>
+            <!-- Перейменовуємо асет для ясності. Тепер це навігаційна модель -->
+            <a-asset-item id="navmesh-asset" src="outbound.glb"></a-asset-item>
         </a-assets>
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
         <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
         
+        <!-- Підлога тепер є лише візуальним елементом, без фізики -->
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
-                 color="#4a5d4a" shadow="receive: true" static-body></a-plane>
+                 color="#4a5d4a" shadow="receive: true"></a-plane>
 
         <a-gltf-model src="#house-model" shadow="cast: true; receive: true" id="house"></a-gltf-model>
         
-        <a-entity gltf-model="#invisible-walls"
-                  visible="false"
-                  static-body="shape: mesh;">
+        <!-- 
+          === NAVMESH ===
+          Це "карта" для переміщення. Вона зроблена видимою і червоною, щоб ви бачили,
+          де гравець може ходити. В ідеалі, це має бути модель ПІДЛОГИ, а не стін.
+        -->
+        <a-entity
+          nav-mesh
+          gltf-model="#navmesh-asset"
+          material="color: red; opacity: 0.5;"
+          visible="true">
         </a-entity>
         
         <!-- 
-          === ГОЛОВНЕ ВИПРАВЛЕННЯ ТУТ ===
-          Використовуємо `movement-controls`, який правильно працює з фізикою.
-          Він автоматично знаходить камеру всередині і рухається відносно її погляду.
+          === ГРАВЕЦЬ З ПРИВ'ЯЗКОЮ ДО NAVMESH ===
         -->
         <a-entity id="rig" position="0 0 10"
-                  movement-controls="speed: 0.15;"
-                  dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
+                  movement-controls="constrainToNavMesh: true;">
             <a-entity id="camera"
                       camera
                       position="0 1.6 0"
@@ -145,7 +150,27 @@
                 <a-cursor></a-cursor>
             </a-entity>
         </a-entity>
+        
+        <!-- 
+            === ТОЧКИ ТЕЛЕПОРТАЦІЇ (CHECKPOINTS) ===
+            Клік по ним буде телепортувати гравця.
+            Використовуємо примітив як тимчасову заміну для моделі "gem".
+        -->
+        <a-dodecahedron
+            checkpoint
+            radius="0.5"
+            color="#FFD700"
+            position="-5 1.6 5">
+        </a-dodecahedron>
+        <a-dodecahedron
+            checkpoint
+            radius="0.5"
+            color="#FFD700"
+            position="5 1.6 5">
+        </a-dodecahedron>
 
+
+        <!-- Початковий маркер залишається без змін -->
         <a-entity id="marker-0-0-0" position="0 0 0">
             <a-sphere class="iot-marker" radius="0.5" color="#00bcd4" opacity="0.7"
                       event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9"
