@@ -5,7 +5,7 @@
     <title>Smart Home XR Tour</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <!-- Використовуємо версію 1.5.0, яка є стабільною з багатьма компонентами aframe-extras -->
+    <!-- Використовуємо версію A-Frame 1.5.0, яка є стабільною з aframe-extras -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Панель керування залишається без змін -->
+    <!-- Весь HTML-інтерфейс (панелі) залишається без змін -->
     <div id="controls-panel">
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
@@ -35,10 +35,6 @@
                 <span id="brightness-value">50%</span>
             </div>
         </div>
-        <!-- 
-            Ми приховуємо цю панель, оскільки тепер у нас є статичні стіни з моделі outbound.glb.
-            Дві системи стін будуть конфліктувати.
-        -->
         <div class="control-group" style="display: none;">
             <strong>🧱 Створення стін:</strong><br>
             <button id="start-wall-btn" onclick="startWallCreation()">Почати стіну</button>
@@ -127,37 +123,29 @@
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
                  color="#4a5d4a" shadow="receive: true" static-body></a-plane>
 
-        <!-- Видима модель будинку -->
-        <a-gltf-model src="#house-model" position="0 0 0" scale="1 1 1" rotation="0 0 0"
-                      shadow="cast: true; receive: true" id="house">
-        </a-gltf-model>
+        <a-gltf-model src="#house-model" shadow="cast: true; receive: true" id="house"></a-gltf-model>
         
-        <!-- НЕВИДИМІ СТІНИ З ФІЗИКОЮ -->
         <a-entity gltf-model="#invisible-walls"
                   visible="false"
                   static-body="shape: mesh;">
         </a-entity>
         
         <!-- 
-          КРИТИЧНІ ЗМІНИ ТУТ 
-          1. wasd-controls перенесено з камери сюди, на #rig.
-          2. Початкова позиція гравця встановлена на рівні землі (y=0)
+          === ГОЛОВНЕ ВИПРАВЛЕННЯ ТУТ ===
+          Використовуємо `movement-controls`, який правильно працює з фізикою.
+          Він автоматично знаходить камеру всередині і рухається відносно її погляду.
         -->
         <a-entity id="rig" position="0 0 10"
-                  wasd-controls="acceleration: 25;"
+                  movement-controls="speed: 0.15;"
                   dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
             <a-entity id="camera"
                       camera
-                      look-controls="pointerLockEnabled: true"
-                      position="0 1.6 0"> <!-- ВИДАЛЕНО wasd-controls та встановлено позицію камери на рівні очей -->
-                <a-cursor fuse="false"
-                          raycaster="objects: .iot-marker"
-                          material="color: #00ff88; shader: flat">
-                </a-cursor>
+                      position="0 1.6 0"
+                      look-controls="pointerLockEnabled: true">
+                <a-cursor></a-cursor>
             </a-entity>
         </a-entity>
 
-        <!-- Початковий маркер залишається без змін -->
         <a-entity id="marker-0-0-0" position="0 0 0">
             <a-sphere class="iot-marker" radius="0.5" color="#00bcd4" opacity="0.7"
                       event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9"
