@@ -123,7 +123,7 @@
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
         <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
-
+        
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
                  color="#4a5d4a" shadow="receive: true" static-body></a-plane>
 
@@ -131,13 +131,13 @@
                       shadow="cast: true; receive: true" id="house">
         </a-gltf-model>
 
-        <a-entity id="rig" position="0 10 20" movement-controls="fly: false;"
-                  dynamic-body="shape: sphere; sphereRadius: 0.8; mass: 5;">
+        <a-entity id="rig" position="0 10 20"
+                  dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
             <a-entity id="camera"
                       camera
                       look-controls="pointerLockEnabled: true"
                       wasd-controls="acceleration: 25; fly: false"
-                      position="0 1.6 0">
+                      position="0 0 0">
                 <a-cursor fuse="false"
                           raycaster="objects: .iot-marker"
                           material="color: #00ff88; shader: flat">
