@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <!-- A-Frame та плагіни -->
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.2.0/dist/aframe-extras.min.js"></script>
     
     <!-- TensorFlow.js для ML -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
@@ -40,6 +40,14 @@
         </div>
 
         <div class="control-group">
+            <strong>🧱 Створення стін:</strong><br>
+            <button onclick="startWallPlacement()">🏗️ Створити стіну</button>
+            <button onclick="toggleWallVisibility()">👁️ Показати/Приховати</button>
+            <div id="wall-status" style="color: #ff9800; margin-top: 5px; font-size: 12px;"></div>
+            <small>Shift+W - створити стіну, ESC - скасувати, T - прозорість</small>
+        </div>
+
+        <div class="control-group">
             <strong>📍 Створення маркерів:</strong><br>
             <button onclick="createMarkerAtCurrentPosition()">Створити маркер тут</button>
             <div id="marker-form" style="display: none;">
@@ -67,28 +75,22 @@
 
         <div class="control-group">
             <strong>💾 Експорт/Імпорт:</strong><br>
-            <button onclick="exportMarkers()">📥 Експортувати маркери</button>
-            <button onclick="document.getElementById('import-file').click()">📤 Імпортувати маркери</button>
+            <button onclick="exportMarkers()">📥 Експортувати все</button>
+            <button onclick="document.getElementById('import-file').click()">📤 Імпортувати все</button>
+            <button onclick="exportWallsOnly()">🧱 Експорт тільки стін</button>
             <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importMarkers(event)">
+            
+            <div class="export-stats">
+                <small>
+                    Поточні дані:<br>
+                    Маркери: <span id="device-count">0</span><br>
+                    Світла: <span id="light-count">0</span><br>
+                    Стіни: <span id="wall-count">0</span>
+                </small>
+            </div>
         </div>
     </div>
-    <!-- Замініть існуючу групу "Експорт/Імпорт" на цю -->
-    <div class="control-group">
-        <strong>💾 Експорт/Імпорт:</strong><br>
-        <button onclick="exportMarkers()">📥 Експортувати все</button>
-        <button onclick="document.getElementById('import-file').click()">📤 Імпортувати все</button>
-        <button onclick="exportWallsOnly()">🧱 Експорт тільки стін</button>
-        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importMarkers(event)">
-        
-        <div class="export-stats">
-            <small>
-                Поточні дані:<br>
-                Маркери: <span id="device-count">0</span><br>
-                Світла: <span id="light-count">0</span><br>
-                Стіни: <span id="wall-count">0</span>
-            </small>
-        </div>
-    </div>
+
     <!-- Інформація про позицію -->
     <div id="position-info">
         <strong>Позиція:</strong><br>
@@ -128,7 +130,7 @@
             <span id="voice-status-text">Готово до роботи</span>
             <div id="voice-transcript"></div>
         </div>
-        <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
+        <small>Команди: "створити маркер", "створити світло", "створити стіну", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "вимкнути світло", "яскравість [число]"</small>
     </div>
 
     <!-- XR сцена -->
@@ -179,8 +181,7 @@
                     position="0 1 0"
                     width="4"
                     align="center"
-                    color="#fff"
-                    font="../fonts/calibri-msdf.json">
+                    color="#fff">
             </a-text>
         </a-entity>
     </a-scene>
