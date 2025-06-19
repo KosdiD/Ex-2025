@@ -797,7 +797,7 @@ function showIotInfo(markerId) {
         document.getElementById('iot-title').textContent = device.name;
         document.getElementById('iot-type').textContent = device.type;
         document.getElementById('iot-description').textContent = device.description;
-        document.getElementById('iot-coords').textContent = `X: ${device.position.x}, Y: ${device.position.y}, Z: ${device.position.z}`);
+        document.getElementById('iot-coords').textContent = `X: ${device.position.x}, Y: ${device.position.y}, Z: ${device.position.z}`;
         
         if (device.mlModels && device.mlModels.length > 0) {
             document.getElementById('iot-ml-models').textContent = device.mlModels.join(', ');
@@ -845,10 +845,12 @@ function toggleMarkers() {
 
 function updatePositionDisplay() {
     const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    document.getElementById('pos-x').textContent = pos.x.toFixed(1);
-    document.getElementById('pos-y').textContent = pos.y.toFixed(1);
-    document.getElementById('pos-z').textContent = pos.z.toFixed(1);
+    if (camera && camera.object3D) {
+        const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+        document.getElementById('pos-x').textContent = pos.x.toFixed(1);
+        document.getElementById('pos-y').textContent = pos.y.toFixed(1);
+        document.getElementById('pos-z').textContent = pos.z.toFixed(1);
+    }
 }
 
 function updateStats() {
@@ -1098,6 +1100,33 @@ function exportWallsOnly() {
 // Ініціалізація
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Smart Home XR Tour завантажено');
+    
+    // Чекаємо завантаження A-Frame
+    if (window.AFRAME) {
+        const scene = document.querySelector('a-scene');
+        if (scene && scene.hasLoaded) {
+            initializeApp();
+        } else if (scene) {
+            scene.addEventListener('loaded', initializeApp);
+        } else {
+            setTimeout(() => {
+                const scene = document.querySelector('a-scene');
+                if (scene) {
+                    scene.addEventListener('loaded', initializeApp);
+                }
+            }, 100);
+        }
+    }
+});
+
+function initializeApp() {
+    console.log('🎬 A-Frame готовий, ініціалізація додатку...');
+    
+    // Отримуємо THREE
+    if (window.AFRAME && window.AFRAME.THREE) {
+        window.THREE = window.AFRAME.THREE;
+    }
+    
     setHeight();
     
     setInterval(updatePositionDisplay, 100);
@@ -1162,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
             canvas.requestPointerLock();
         }
     });
-});
+}
 
 // Глобальні функції
 window.changeHeight = changeHeight;
@@ -1184,5 +1213,4 @@ window.updateBrightness = updateBrightness;
 window.toggleLightDevice = toggleLightDevice;
 window.startWallPlacement = startWallPlacement;
 window.toggleWallVisibility = toggleWallVisibility;
-window.exportWallsOnly = exportWallsOnly;
-window.showNotification = showNotification;
+window.exportWallsOnly = export
