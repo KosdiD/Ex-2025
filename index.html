@@ -72,7 +72,23 @@
             <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importMarkers(event)">
         </div>
     </div>
-
+    <!-- Замініть існуючу групу "Експорт/Імпорт" на цю -->
+    <div class="control-group">
+        <strong>💾 Експорт/Імпорт:</strong><br>
+        <button onclick="exportMarkers()">📥 Експортувати все</button>
+        <button onclick="document.getElementById('import-file').click()">📤 Імпортувати все</button>
+        <button onclick="exportWallsOnly()">🧱 Експорт тільки стін</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importMarkers(event)">
+        
+        <div class="export-stats">
+            <small>
+                Поточні дані:<br>
+                Маркери: <span id="device-count">0</span><br>
+                Світла: <span id="light-count">0</span><br>
+                Стіни: <span id="wall-count">0</span>
+            </small>
+        </div>
+    </div>
     <!-- Інформація про позицію -->
     <div id="position-info">
         <strong>Позиція:</strong><br>
