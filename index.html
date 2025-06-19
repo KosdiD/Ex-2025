@@ -14,63 +14,80 @@
     <link rel="stylesheet" href="style.css">
 
     <script>
-        // === НОВА СИСТЕМА КОЛІЗІЙ НА ОСНОВІ RAYCAST ===
+        // === ФІНАЛЬНА ВЕРСІЯ: Проста і надійна система колізій на основі Raycast ===
         AFRAME.registerComponent('raycast-collider', {
             schema: {
-                // Клас об'єктів, з якими будемо стикатися
                 target: {type: 'string', default: '.collidable'},
-                // Відстань, на якій промінь детектує стіну
-                distance: {type: 'number', default: 0.6} 
+                distance: {type: 'number', default: 0.5}, // Зменшено відстань для точності
+                debug: {type: 'boolean', default: true}
             },
 
             init: function () {
                 // Ініціалізуємо змінні один раз для оптимізації
                 this.raycaster = new THREE.Raycaster();
-                this.movementVector = new THREE.Vector3();
+                this.worldPosition = new THREE.Vector3();
+                this.movementDirection = new THREE.Vector3();
                 this.lastGoodPosition = new THREE.Vector3();
-                this.el.object3D.getWorldPosition(this.lastGoodPosition); // Зберігаємо стартову позицію
+                
+                // Зберігаємо початкову локальну позицію
+                this.el.object3D.position.copy(this.lastGoodPosition); 
                 console.log("Raycast Collider ініціалізовано.");
+
+                // Створюємо лінію для налагодження, щоб бачити промінь
+                if (this.data.debug) {
+                    this.debugLine = document.createElement('a-entity');
+                    this.debugLine.setAttribute('line', {
+                        start: '0 0 0',
+                        end: '0 0 -2', // Початкова довжина
+                        color: 'red',
+                        opacity: 0.5
+                    });
+                    this.el.appendChild(this.debugLine); // Додаємо лінію як дочірній елемент гравця
+                }
             },
 
             tick: function () {
                 const el = this.el;
-                const object3D = el.object3D;
-                const currentPosition = object3D.position;
                 
-                // Отримуємо вектор швидкості від компонента керування
-                const velocity = el.getAttribute('movement-controls')?.velocity || new THREE.Vector3();
-
-                // Якщо гравець не рухається, нічого не робимо
-                if (velocity.lengthSq() === 0) {
-                    this.lastGoodPosition.copy(currentPosition);
+                // --- 1. Отримуємо напрямок руху ---
+                const velocity = el.getAttribute('movement-controls')?.velocity;
+                if (!velocity || velocity.lengthSq() === 0) {
+                    // Якщо не рухаємось, оновлюємо останню безпечну позицію
+                    this.lastGoodPosition.copy(el.object3D.position);
+                    if(this.debugLine) this.debugLine.setAttribute('visible', false); // Ховаємо промінь
                     return;
                 }
+                if(this.debugLine) this.debugLine.setAttribute('visible', true); // Показуємо промінь
 
-                // Визначаємо напрямок руху
-                this.movementVector.copy(velocity).normalize();
+                // --- 2. Готуємо промінь (Raycaster) ---
+                // Отримуємо поточну світову позицію гравця
+                el.object3D.getWorldPosition(this.worldPosition);
+                // Отримуємо напрямок руху у світових координатах
+                this.movementDirection.copy(velocity).applyQuaternion(el.object3D.quaternion).normalize();
                 
-                // Налаштовуємо raycaster
-                this.raycaster.set(currentPosition, this.movementVector);
+                // Встановлюємо промінь: звідки і куди
+                this.raycaster.set(this.worldPosition, this.movementDirection);
 
-                // Знаходимо всі об'єкти, з якими можна стикатися
+                // --- 3. Знаходимо об'єкти для перевірки ---
                 const collidableEls = el.sceneEl.querySelectorAll(this.data.target);
-                const objectsToTest = [];
-                collidableEls.forEach(collidableEl => {
-                    if (collidableEl.object3D) {
-                        objectsToTest.push(collidableEl.object3D);
-                    }
-                });
+                const objectsToTest = Array.from(collidableEls).map(e => e.object3D);
 
-                // Пускаємо промінь і шукаємо перетини
+                // --- 4. Пускаємо промінь і перевіряємо зіткнення ---
                 const intersections = this.raycaster.intersectObjects(objectsToTest, true);
+                const collisionDetected = intersections.length > 0 && intersections[0].distance < this.data.distance;
 
-                // Якщо знайдено перетин на близькій відстані
-                if (intersections.length > 0 && intersections[0].distance < this.data.distance) {
-                    // КОЛІЗІЯ! Повертаємо гравця на останню "хорошу" позицію
+                // --- 5. Реагуємо на зіткнення ---
+                if (collisionDetected) {
+                    // КОЛІЗІЯ! Повертаємо гравця на останню безпечну позицію
                     el.object3D.position.copy(this.lastGoodPosition);
                 } else {
-                    // Немає колізії, оновлюємо "хорошу" позицію
-                    this.lastGoodPosition.copy(currentPosition);
+                    // Немає колізії, оновлюємо безпечну позицію
+                    this.lastGoodPosition.copy(el.object3D.position);
+                }
+
+                // Оновлюємо лінію для налагодження
+                if (this.data.debug && this.debugLine) {
+                    this.debugLine.setAttribute('line', 'color', collisionDetected ? 'blue' : 'red');
                 }
             }
         });
@@ -197,7 +214,7 @@
         <!-- ГРАВЕЦЬ З НОВИМ КОМПОНЕНТОМ raycast-collider -->
         <a-entity id="rig" position="0 0.5 10"
                   movement-controls="speed: 0.15;"
-                  raycast-collider>
+                  raycast-collider="debug: true;">
             <a-entity id="camera"
                       camera
                       position="0 1.6 0"
