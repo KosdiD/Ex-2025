@@ -7,7 +7,7 @@ let voiceRecognition = null;
 let isListening = false;
 let useMLModel = false;
 let speechModel = null;
-let lightDevices = {}; // Для збереження світлових пристроїв
+let lightDevices = {};
 let lightCounter = 1;
 let globalBrightness = 50;
 let wallCounter = 1;
@@ -15,8 +15,9 @@ let wallData = {};
 let isPlacingWall = false;
 let wallStartPoint = null;
 let wallPreview = null;
+let currentLightDevice = null;
 
-// Голосові команди з додаванням світлових команд
+// Голосові команди
 const voiceCommands = {
     'створити маркер': () => createMarkerAtCurrentPosition(),
     'створи маркер': () => createMarkerAtCurrentPosition(),
@@ -37,7 +38,6 @@ const voiceCommands = {
     'нижче': () => changeHeight(-3),
     'стоп': () => stopVoiceRecognition(),
     'зупинити': () => stopVoiceRecognition(),
-    // Нові команди для світла
     'створити світло': () => createLight(),
     'додати світло': () => createLight(),
     'вимкнути світло': () => setAllLights(false),
@@ -48,7 +48,7 @@ const voiceCommands = {
     'увімкнути все': () => setAllLights(true),
     'максимальна яскравість': () => updateBrightness(100),
     'мінімальна яскравість': () => updateBrightness(0),
-    'середня яскравість': () => updateBrightness(50)
+    'середня яскравість': () => updateBrightness(50),
     'створити стіну': () => startWallPlacement(),
     'створи стіну': () => startWallPlacement(),
     'додати стіну': () => startWallPlacement(),
@@ -66,13 +66,11 @@ function initVoiceRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     voiceRecognition = new SpeechRecognition();
     
-    // Налаштування
     voiceRecognition.continuous = true;
     voiceRecognition.interimResults = true;
-    voiceRecognition.lang = 'uk-UA'; // Українська мова
+    voiceRecognition.lang = 'uk-UA';
     voiceRecognition.maxAlternatives = 3;
 
-    // Обробники подій
     voiceRecognition.onstart = () => {
         console.log('🎤 Розпізнавання розпочато');
         document.getElementById('voice-indicator').classList.add('active');
@@ -93,20 +91,17 @@ function initVoiceRecognition() {
             }
         }
 
-        // Показуємо проміжний результат
         if (interimTranscript) {
             document.getElementById('voice-transcript').innerHTML = 
                 `<em style="opacity: 0.7">${interimTranscript}</em>`;
         }
 
-        // Обробляємо фінальний результат
         if (finalTranscript) {
             document.getElementById('voice-transcript').innerHTML = 
                 `<strong>"${finalTranscript}"</strong>`;
             
             processVoiceCommand(finalTranscript);
             
-            // Очищаємо через 3 секунди
             setTimeout(() => {
                 document.getElementById('voice-transcript').innerHTML = '';
             }, 3000);
@@ -132,11 +127,10 @@ function initVoiceRecognition() {
     return true;
 }
 
-// Обробка голосової команди з підтримкою яскравості
+// Обробка голосової команди
 function processVoiceCommand(command) {
     console.log('🎯 Обробка команди:', command);
     
-    // Перевірка команди яскравості з числом
     const brightnessMatch = command.match(/яскравість\s*(\d+)/);
     if (brightnessMatch) {
         const brightness = Math.min(100, Math.max(0, parseInt(brightnessMatch[1])));
@@ -145,24 +139,20 @@ function processVoiceCommand(command) {
         return;
     }
     
-    // Шукаємо відповідну команду
     for (const [key, action] of Object.entries(voiceCommands)) {
         if (command.includes(key)) {
             console.log('✅ Виконую команду:', key);
             action();
-            
-            // Візуальний фідбек
             document.getElementById('voice-status-text').textContent = `Виконано: ${key}`;
             return;
         }
     }
     
-    // Якщо команда не розпізнана
     document.getElementById('voice-status-text').textContent = 'Команда не розпізнана';
     console.log('❓ Невідома команда:', command);
 }
 
-// Перемикання голосового керування
+// Голосове керування
 function toggleVoiceRecognition() {
     if (!voiceRecognition && !initVoiceRecognition()) {
         return;
@@ -207,13 +197,12 @@ function updateVoiceButton() {
     }
 }
 
-// ML режим з TensorFlow.js
+// ML режим
 async function initMLModel() {
     try {
         const recognizer = speechCommands.create('BROWSER_FFT');
         await recognizer.ensureModelLoaded();
         
-        // Налаштування власних команд
         const words = recognizer.wordLabels();
         console.log('📚 Доступні ML команди:', words);
         
@@ -238,29 +227,7 @@ function toggleMLMode() {
     console.log('🤖 ML режим:', useMLModel ? 'увімкнено' : 'вимкнено');
 }
 
-// Edge ML обробка аудіо
-async function processAudioWithML(audioData) {
-    if (!speechModel || !useMLModel) return;
-    
-    try {
-        const scores = await speechModel.recognize(audioData);
-        const labels = speechModel.wordLabels();
-        
-        // Знаходимо команду з найвищим скором
-        const maxScore = Math.max(...scores);
-        const maxIndex = scores.indexOf(maxScore);
-        const command = labels[maxIndex];
-        
-        if (maxScore > 0.75) { // Поріг впевненості
-            console.log('🤖 ML розпізнано:', command, 'впевненість:', maxScore);
-            processVoiceCommand(command);
-        }
-    } catch (error) {
-        console.error('❌ Помилка ML обробки:', error);
-    }
-}
-
-// IoT пристрої за замовчуванням
+// IoT пристрої
 const defaultDevices = {
     'marker-0-0-0': {
         name: 'Розумний хаб',
@@ -271,7 +238,6 @@ const defaultDevices = {
     }
 };
 
-// Типи Edge ML пристроїв з додаванням світла
 const edgeMLTypes = {
     vision: {
         name: 'Камера з Computer Vision',
@@ -311,10 +277,163 @@ const edgeMLTypes = {
     }
 };
 
-// Копіюємо дефолтні пристрої в робочі дані
 deviceData = {...defaultDevices};
 
-// Функції керування світлом
+// Функції стін
+function startWallPlacement() {
+    if (isPlacingWall) {
+        completeWallPlacement();
+    } else {
+        isPlacingWall = true;
+        const camera = document.getElementById('camera');
+        const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+        
+        wallStartPoint = {
+            x: Math.round(pos.x * 100) / 100,
+            z: Math.round(pos.z * 100) / 100
+        };
+        
+        wallPreview = document.createElement('a-box');
+        wallPreview.setAttribute('position', `${wallStartPoint.x} 5 ${wallStartPoint.z}`);
+        wallPreview.setAttribute('width', '0.2');
+        wallPreview.setAttribute('height', '10');
+        wallPreview.setAttribute('depth', '0.2');
+        wallPreview.setAttribute('material', 'color: #ff9800; opacity: 0.5');
+        document.querySelector('a-scene').appendChild(wallPreview);
+        
+        document.getElementById('wall-status').textContent = 'Клікніть ще раз для завершення стіни';
+        console.log('🏗️ Початок створення стіни');
+    }
+}
+
+function updateWallPreview() {
+    if (!isPlacingWall || !wallPreview) return;
+    
+    const camera = document.getElementById('camera');
+    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+    
+    const endX = Math.round(pos.x * 100) / 100;
+    const endZ = Math.round(pos.z * 100) / 100;
+    
+    const centerX = (wallStartPoint.x + endX) / 2;
+    const centerZ = (wallStartPoint.z + endZ) / 2;
+    const length = Math.sqrt(
+        Math.pow(endX - wallStartPoint.x, 2) + 
+        Math.pow(endZ - wallStartPoint.z, 2)
+    );
+    
+    if (length > 0.5) {
+        const angle = Math.atan2(endZ - wallStartPoint.z, endX - wallStartPoint.x) * 180 / Math.PI;
+        
+        wallPreview.setAttribute('position', `${centerX} 5 ${centerZ}`);
+        wallPreview.setAttribute('width', `${length}`);
+        wallPreview.setAttribute('rotation', `0 ${-angle} 0`);
+    }
+}
+
+function completeWallPlacement() {
+    if (!isPlacingWall || !wallPreview) return;
+    
+    const camera = document.getElementById('camera');
+    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+    
+    const endX = Math.round(pos.x * 100) / 100;
+    const endZ = Math.round(pos.z * 100) / 100;
+    
+    const centerX = (wallStartPoint.x + endX) / 2;
+    const centerZ = (wallStartPoint.z + endZ) / 2;
+    const length = Math.sqrt(
+        Math.pow(endX - wallStartPoint.x, 2) + 
+        Math.pow(endZ - wallStartPoint.z, 2)
+    );
+    
+    if (length > 0.5) {
+        const angle = Math.atan2(endZ - wallStartPoint.z, endX - wallStartPoint.x) * 180 / Math.PI;
+        
+        createWall({
+            position: { x: centerX, y: 5, z: centerZ },
+            width: length,
+            height: 10,
+            rotation: -angle,
+            startPoint: wallStartPoint,
+            endPoint: { x: endX, z: endZ }
+        });
+    }
+    
+    if (wallPreview) {
+        wallPreview.remove();
+        wallPreview = null;
+    }
+    
+    isPlacingWall = false;
+    wallStartPoint = null;
+    document.getElementById('wall-status').textContent = '';
+    updateStats();
+}
+
+function cancelWallPlacement() {
+    if (wallPreview) {
+        wallPreview.remove();
+        wallPreview = null;
+    }
+    isPlacingWall = false;
+    wallStartPoint = null;
+    document.getElementById('wall-status').textContent = '';
+}
+
+function createWall(params) {
+    const wallId = `wall-${wallCounter++}`;
+    
+    const wall = document.createElement('a-box');
+    wall.setAttribute('id', wallId);
+    wall.setAttribute('position', `${params.position.x} ${params.position.y} ${params.position.z}`);
+    wall.setAttribute('width', params.width);
+    wall.setAttribute('height', params.height);
+    wall.setAttribute('depth', '0.3');
+    wall.setAttribute('rotation', `0 ${params.rotation} 0`);
+    wall.setAttribute('material', 'color: #8B4513; opacity: 0.8');
+    wall.setAttribute('static-body', '');
+    wall.setAttribute('class', 'collision-wall');
+    
+    document.querySelector('a-scene').appendChild(wall);
+    
+    wallData[wallId] = {
+        id: wallId,
+        position: params.position,
+        width: params.width,
+        height: params.height,
+        rotation: params.rotation,
+        startPoint: params.startPoint,
+        endPoint: params.endPoint
+    };
+    
+    console.log(`🧱 Створено стіну ${wallId}`);
+}
+
+function createWallFromData(wallData) {
+    const wall = document.createElement('a-box');
+    wall.setAttribute('id', wallData.id);
+    wall.setAttribute('position', `${wallData.position.x} ${wallData.position.y} ${wallData.position.z}`);
+    wall.setAttribute('width', wallData.width);
+    wall.setAttribute('height', wallData.height);
+    wall.setAttribute('depth', '0.3');
+    wall.setAttribute('rotation', `0 ${wallData.rotation} 0`);
+    wall.setAttribute('material', 'color: #8B4513; opacity: 0.8');
+    wall.setAttribute('static-body', '');
+    wall.setAttribute('class', 'collision-wall');
+    
+    document.querySelector('a-scene').appendChild(wall);
+}
+
+function toggleWallVisibility() {
+    const walls = document.querySelectorAll('.collision-wall');
+    walls.forEach(wall => {
+        const opacity = wall.getAttribute('material').opacity;
+        wall.setAttribute('material', `opacity: ${opacity === '0.8' ? '0.2' : '0.8'}`);
+    });
+}
+
+// Функції світла
 function createLight() {
     const camera = document.getElementById('camera');
     const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
@@ -322,16 +441,14 @@ function createLight() {
     const lightId = `light-${lightCounter++}`;
     const lightPosition = {
         x: Math.round(pos.x * 100) / 100,
-        y: Math.round(pos.y * 100) / 100 + 5, // Трохи вище від камери
+        y: Math.round(pos.y * 100) / 100 + 5,
         z: Math.round(pos.z * 100) / 100
     };
     
-    // Створюємо A-Frame світло
     const lightEntity = document.createElement('a-entity');
     lightEntity.setAttribute('id', lightId);
     lightEntity.setAttribute('position', `${lightPosition.x} ${lightPosition.y} ${lightPosition.z}`);
     
-    // Точкове світло
     const pointLight = document.createElement('a-light');
     pointLight.setAttribute('type', 'point');
     pointLight.setAttribute('color', '#ffeb3b');
@@ -339,7 +456,6 @@ function createLight() {
     pointLight.setAttribute('distance', '20');
     pointLight.setAttribute('decay', '2');
     
-    // Візуальна лампочка
     const bulb = document.createElement('a-sphere');
     bulb.setAttribute('radius', '0.3');
     bulb.setAttribute('color', '#ffeb3b');
@@ -347,14 +463,12 @@ function createLight() {
     bulb.setAttribute('emissiveIntensity', globalBrightness / 100);
     bulb.setAttribute('opacity', '0.8');
     
-    // Текст
     const text = document.createElement('a-text');
     text.setAttribute('value', `Світло ${lightCounter - 1}`);
     text.setAttribute('position', '0 0.8 0');
     text.setAttribute('width', '3');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
-    text.setAttribute('font', '../fonts/calibri-msdf.json');
     
     lightEntity.appendChild(pointLight);
     lightEntity.appendChild(bulb);
@@ -362,7 +476,6 @@ function createLight() {
     
     document.querySelector('a-scene').appendChild(lightEntity);
     
-    // Зберігаємо дані про світло
     lightDevices[lightId] = {
         id: lightId,
         name: `Світло ${lightCounter - 1}`,
@@ -372,6 +485,7 @@ function createLight() {
         element: lightEntity
     };
     
+    updateStats();
     console.log(`💡 Створено світло на позиції:`, lightPosition);
 }
 
@@ -394,7 +508,6 @@ function updateBrightness(value) {
     document.getElementById('brightness-slider').value = value;
     document.getElementById('brightness-value').textContent = `${value}%`;
     
-    // Оновлюємо всі світла
     Object.values(lightDevices).forEach(light => {
         light.brightness = value;
         if (light.isOn) {
@@ -402,7 +515,6 @@ function updateBrightness(value) {
         }
     });
     
-    // Оновлюємо загальне освітлення
     const ambientLight = document.getElementById('ambient-light');
     ambientLight.setAttribute('intensity', 0.3 + (value / 100) * 0.4);
 }
@@ -422,8 +534,6 @@ function updateLightState(light) {
     }
 }
 
-let currentLightDevice = null;
-
 function toggleLightDevice() {
     if (currentLightDevice) {
         currentLightDevice.isOn = !currentLightDevice.isOn;
@@ -432,7 +542,45 @@ function toggleLightDevice() {
     }
 }
 
-// Функції керування висотою
+function createLightFromData(lightId, lightData) {
+    const lightEntity = document.createElement('a-entity');
+    lightEntity.setAttribute('id', lightId);
+    lightEntity.setAttribute('position', `${lightData.position.x} ${lightData.position.y} ${lightData.position.z}`);
+    
+    const pointLight = document.createElement('a-light');
+    pointLight.setAttribute('type', 'point');
+    pointLight.setAttribute('color', '#ffeb3b');
+    pointLight.setAttribute('intensity', lightData.isOn ? lightData.brightness / 100 : 0);
+    pointLight.setAttribute('distance', '20');
+    pointLight.setAttribute('decay', '2');
+    
+    const bulb = document.createElement('a-sphere');
+    bulb.setAttribute('radius', '0.3');
+    bulb.setAttribute('color', '#ffeb3b');
+    bulb.setAttribute('emissive', '#ffeb3b');
+    bulb.setAttribute('emissiveIntensity', lightData.isOn ? lightData.brightness / 100 : 0);
+    bulb.setAttribute('opacity', lightData.isOn ? '0.8' : '0.3');
+    
+    const text = document.createElement('a-text');
+    text.setAttribute('value', lightData.name);
+    text.setAttribute('position', '0 0.8 0');
+    text.setAttribute('width', '3');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    
+    lightEntity.appendChild(pointLight);
+    lightEntity.appendChild(bulb);
+    lightEntity.appendChild(text);
+    
+    document.querySelector('a-scene').appendChild(lightEntity);
+    
+    lightDevices[lightId] = {
+        ...lightData,
+        element: lightEntity
+    };
+}
+
+// Функції маркерів
 function changeHeight(direction) {
     const input = document.getElementById('height-input');
     const currentValue = parseInt(input.value);
@@ -449,7 +597,6 @@ function setHeight() {
     document.getElementById('current-height').textContent = height;
 }
 
-// Створення маркера
 function createMarkerAtCurrentPosition() {
     const camera = document.getElementById('camera');
     const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
@@ -474,7 +621,6 @@ function saveMarker() {
     container.setAttribute('id', markerId);
     container.setAttribute('position', `${tempMarkerPosition.x} ${tempMarkerPosition.y} ${tempMarkerPosition.z}`);
     
-    // Визначаємо колір та тип на основі ML типу
     let markerColor = '#00ff88';
     let deviceType = 'IoT Пристрій';
     let mlModels = [];
@@ -488,7 +634,6 @@ function saveMarker() {
         mlFeatures = mlDevice.features;
     }
     
-    // Сфера маркера
     const marker = document.createElement('a-sphere');
     marker.setAttribute('class', 'iot-marker');
     marker.setAttribute('radius', '0.5');
@@ -498,21 +643,17 @@ function saveMarker() {
     marker.setAttribute('event-set__leave', '_event: mouseleave; scale: 1 1 1; opacity: 0.7');
     marker.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 15000');
     
-    // Додаємо ефект пульсації для ML пристроїв
     if (mlType) {
         marker.setAttribute('animation__pulse', 'property: scale; from: 1 1 1; to: 1.1 1.1 1.1; loop: true; dir: alternate; dur: 2000');
     }
     
-    // Текст над маркером
     const text = document.createElement('a-text');
     text.setAttribute('value', name);
     text.setAttribute('position', '0 1 0');
     text.setAttribute('width', '4');
     text.setAttribute('align', 'center');
     text.setAttribute('color', '#fff');
-    text.setAttribute('font', '../fonts/calibri-msdf.json');
     
-    // Додаємо іконку ML якщо це ML пристрій
     if (mlType) {
         const mlIcon = document.createElement('a-text');
         mlIcon.setAttribute('value', '🤖');
@@ -522,7 +663,6 @@ function saveMarker() {
         container.appendChild(mlIcon);
     }
     
-    // Якщо це світловий пристрій, додаємо світло
     if (mlType === 'light') {
         const lightId = `device-light-${markerCounter}`;
         const pointLight = document.createElement('a-light');
@@ -533,7 +673,6 @@ function saveMarker() {
         pointLight.setAttribute('decay', '2');
         container.appendChild(pointLight);
         
-        // Зберігаємо як світловий пристрій
         lightDevices[lightId] = {
             id: lightId,
             name: name,
@@ -549,7 +688,6 @@ function saveMarker() {
     container.appendChild(text);
     document.querySelector('a-scene').appendChild(container);
     
-    // Зберігаємо дані про пристрій
     deviceData[markerId] = {
         name: name,
         type: deviceType,
@@ -561,13 +699,13 @@ function saveMarker() {
         isLight: mlType === 'light'
     };
     
-    // Додаємо обробник кліку
     marker.addEventListener('click', function() {
         showIotInfo(markerId);
     });
     
     markerCounter++;
     cancelMarker();
+    updateStats();
     
     console.log(`✅ ${mlType ? 'ML ' : ''}Маркер "${name}" створено на позиції:`, tempMarkerPosition);
 }
@@ -580,16 +718,87 @@ function cancelMarker() {
     tempMarkerPosition = null;
 }
 
-// Відображення інформації про IoT
+function createMarkerFromData(markerId, device) {
+    const container = document.createElement('a-entity');
+    container.setAttribute('id', markerId);
+    container.setAttribute('position', `${device.position.x} ${device.position.y} ${device.position.z}`);
+    
+    let markerColor = '#00ff88';
+    if (device.mlType && edgeMLTypes[device.mlType]) {
+        markerColor = edgeMLTypes[device.mlType].color;
+    }
+    
+    const marker = document.createElement('a-sphere');
+    marker.setAttribute('class', 'iot-marker');
+    marker.setAttribute('radius', '0.5');
+    marker.setAttribute('color', markerColor);
+    marker.setAttribute('opacity', '0.7');
+    marker.setAttribute('event-set__enter', '_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9');
+    marker.setAttribute('event-set__leave', '_event: mouseleave; scale: 1 1 1; opacity: 0.7');
+    marker.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 15000');
+    
+    if (device.mlType) {
+        marker.setAttribute('animation__pulse', 'property: scale; from: 1 1 1; to: 1.1 1.1 1.1; loop: true; dir: alternate; dur: 2000');
+    }
+    
+    const text = document.createElement('a-text');
+    text.setAttribute('value', device.name);
+    text.setAttribute('position', '0 1 0');
+    text.setAttribute('width', '4');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    
+    if (device.mlType) {
+        const mlIcon = document.createElement('a-text');
+        mlIcon.setAttribute('value', '🤖');
+        mlIcon.setAttribute('position', '0 1.5 0');
+        mlIcon.setAttribute('width', '6');
+        mlIcon.setAttribute('align', 'center');
+        container.appendChild(mlIcon);
+    }
+    
+    if (device.mlType === 'light') {
+        const lightId = `device-light-${markerId.split('-')[1]}`;
+        const pointLight = document.createElement('a-light');
+        pointLight.setAttribute('type', 'point');
+        pointLight.setAttribute('color', '#ffeb3b');
+        pointLight.setAttribute('intensity', '0.5');
+        pointLight.setAttribute('distance', '15');
+        pointLight.setAttribute('decay', '2');
+        container.appendChild(pointLight);
+        
+        const existingLight = Object.values(lightDevices).find(l => l.name === device.name && l.isMarker);
+        if (!existingLight) {
+            lightDevices[lightId] = {
+                id: lightId,
+                name: device.name,
+                position: device.position,
+                isOn: true,
+                brightness: 50,
+                element: container,
+                isMarker: true
+            };
+        }
+    }
+    
+    container.appendChild(marker);
+    container.appendChild(text);
+    document.querySelector('a-scene').appendChild(container);
+    
+    marker.addEventListener('click', function() {
+        showIotInfo(markerId);
+    });
+}
+
+// UI функції
 function showIotInfo(markerId) {
     const device = deviceData[markerId];
     if (device) {
         document.getElementById('iot-title').textContent = device.name;
         document.getElementById('iot-type').textContent = device.type;
         document.getElementById('iot-description').textContent = device.description;
-        document.getElementById('iot-coords').textContent = `X: ${device.position.x}, Y: ${device.position.y}, Z: ${device.position.z}`;
+        document.getElementById('iot-coords').textContent = `X: ${device.position.x}, Y: ${device.position.y}, Z: ${device.position.z}`);
         
-        // ML інформація
         if (device.mlModels && device.mlModels.length > 0) {
             document.getElementById('iot-ml-models').textContent = device.mlModels.join(', ');
             document.getElementById('iot-ml-features').textContent = device.mlFeatures.join(', ');
@@ -598,7 +807,6 @@ function showIotInfo(markerId) {
             document.getElementById('iot-ml-features').textContent = 'Стандартні функції';
         }
         
-        // Показуємо контролі для світла
         if (device.isLight) {
             document.getElementById('light-controls').style.display = 'block';
             const lightDevice = Object.values(lightDevices).find(l => l.name === device.name);
@@ -621,9 +829,67 @@ function closeIotPanel() {
     currentLightDevice = null;
 }
 
-// Експорт всіх даних
+function resetPosition() {
+    document.getElementById('rig').setAttribute('position', '0 10 20');
+    document.getElementById('height-input').value = 10;
+    document.getElementById('current-height').textContent = 10;
+}
+
+function toggleMarkers() {
+    markersVisible = !markersVisible;
+    const markers = document.querySelectorAll('.iot-marker');
+    markers.forEach(marker => {
+        marker.setAttribute('visible', markersVisible);
+    });
+}
+
+function updatePositionDisplay() {
+    const camera = document.getElementById('camera');
+    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
+    document.getElementById('pos-x').textContent = pos.x.toFixed(1);
+    document.getElementById('pos-y').textContent = pos.y.toFixed(1);
+    document.getElementById('pos-z').textContent = pos.z.toFixed(1);
+}
+
+function updateStats() {
+    const deviceCount = Object.keys(deviceData).length - Object.keys(defaultDevices).length;
+    const lightCount = Object.keys(lightDevices).length;
+    const wallCount = Object.keys(wallData).length;
+    
+    const deviceElement = document.getElementById('device-count');
+    const lightElement = document.getElementById('light-count');
+    const wallElement = document.getElementById('wall-count');
+    
+    if (deviceElement) deviceElement.textContent = deviceCount;
+    if (lightElement) lightElement.textContent = lightCount;
+    if (wallElement) wallElement.textContent = wallCount;
+}
+
+function showNotification(message, type = 'info') {
+    const oldNotification = document.getElementById('notification');
+    if (oldNotification) {
+        oldNotification.remove();
+    }
+    
+    const notification = document.createElement('div');
+    notification.id = 'notification';
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Експорт/Імпорт
 function exportMarkers() {
-    // Підготовка даних для експорту без циклічних посилань
     const cleanDeviceData = {};
     Object.entries(deviceData).forEach(([id, device]) => {
         cleanDeviceData[id] = {
@@ -683,7 +949,6 @@ function exportMarkers() {
     link.download = `smart-home-xr-data-${Date.now()}.json`;
     link.click();
     
-    // Очищення URL
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
     
     console.log('✅ Експортовано:', 
@@ -691,264 +956,111 @@ function exportMarkers() {
         Object.keys(lightDevices).length, 'світлових пристроїв,',
         Object.keys(wallData).length, 'стін');
     
-    // Візуальне підтвердження
     showNotification('Дані успішно експортовано!', 'success');
 }
-    // Функції для створення стін
-function startWallPlacement() {
-    if (isPlacingWall) {
-        completeWallPlacement();
-    } else {
-        isPlacingWall = true;
-        const camera = document.getElementById('camera');
-        const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-        
-        wallStartPoint = {
-            x: Math.round(pos.x * 100) / 100,
-            z: Math.round(pos.z * 100) / 100
-        };
-        
-        // Створюємо прев'ю стіни
-        wallPreview = document.createElement('a-box');
-        wallPreview.setAttribute('position', `${wallStartPoint.x} 5 ${wallStartPoint.z}`);
-        wallPreview.setAttribute('width', '0.2');
-        wallPreview.setAttribute('height', '10');
-        wallPreview.setAttribute('depth', '0.2');
-        wallPreview.setAttribute('material', 'color: #ff9800; opacity: 0.5');
-        document.querySelector('a-scene').appendChild(wallPreview);
-        
-        document.getElementById('wall-status').textContent = 'Клікніть ще раз для завершення стіни';
-        console.log('🏗️ Початок створення стіни');
-    }
-}
 
-function updateWallPreview() {
-    if (!isPlacingWall || !wallPreview) return;
+function importMarkers(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    const endX = Math.round(pos.x * 100) / 100;
-    const endZ = Math.round(pos.z * 100) / 100;
-    
-    // Розраховуємо параметри стіни
-    const centerX = (wallStartPoint.x + endX) / 2;
-    const centerZ = (wallStartPoint.z + endZ) / 2;
-    const length = Math.sqrt(
-        Math.pow(endX - wallStartPoint.x, 2) + 
-        Math.pow(endZ - wallStartPoint.z, 2)
-    );
-    
-    if (length > 0.5) {
-        const angle = Math.atan2(endZ - wallStartPoint.z, endX - wallStartPoint.x) * 180 / Math.PI;
-        
-        wallPreview.setAttribute('position', `${centerX} 5 ${centerZ}`);
-        wallPreview.setAttribute('width', `${length}`);
-        wallPreview.setAttribute('rotation', `0 ${-angle} 0`);
-    }
-}
-
-function completeWallPlacement() {
-    if (!isPlacingWall || !wallPreview) return;
-    
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    
-    const endX = Math.round(pos.x * 100) / 100;
-    const endZ = Math.round(pos.z * 100) / 100;
-    
-    // Розраховуємо параметри стіни
-    const centerX = (wallStartPoint.x + endX) / 2;
-    const centerZ = (wallStartPoint.z + endZ) / 2;
-    const length = Math.sqrt(
-        Math.pow(endX - wallStartPoint.x, 2) + 
-        Math.pow(endZ - wallStartPoint.z, 2)
-    );
-    
-    if (length > 0.5) {
-        const angle = Math.atan2(endZ - wallStartPoint.z, endX - wallStartPoint.x) * 180 / Math.PI;
-        
-        createWall({
-            position: { x: centerX, y: 5, z: centerZ },
-            width: length,
-            height: 10,
-            rotation: -angle,
-            startPoint: wallStartPoint,
-            endPoint: { x: endX, z: endZ }
-        });
-    }
-    
-    // Видаляємо прев'ю
-    if (wallPreview) {
-        wallPreview.remove();
-        wallPreview = null;
-    }
-    
-    isPlacingWall = false;
-    wallStartPoint = null;
-    document.getElementById('wall-status').textContent = '';
-}
-
-function cancelWallPlacement() {
-    if (wallPreview) {
-        wallPreview.remove();
-        wallPreview = null;
-    }
-    isPlacingWall = false;
-    wallStartPoint = null;
-    document.getElementById('wall-status').textContent = '';
-}
-
-function createWall(params) {
-    const wallId = `wall-${wallCounter++}`;
-    
-    const wall = document.createElement('a-box');
-    wall.setAttribute('id', wallId);
-    wall.setAttribute('position', `${params.position.x} ${params.position.y} ${params.position.z}`);
-    wall.setAttribute('width', params.width);
-    wall.setAttribute('height', params.height);
-    wall.setAttribute('depth', '0.3');
-    wall.setAttribute('rotation', `0 ${params.rotation} 0`);
-    wall.setAttribute('material', 'color: #8B4513; opacity: 0.8');
-    wall.setAttribute('static-body', '');
-    wall.setAttribute('class', 'collision-wall');
-    
-    document.querySelector('a-scene').appendChild(wall);
-    
-    // Зберігаємо дані про стіну
-    wallData[wallId] = {
-        id: wallId,
-        position: params.position,
-        width: params.width,
-        height: params.height,
-        rotation: params.rotation,
-        startPoint: params.startPoint,
-        endPoint: params.endPoint
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+            
+            if (!importData.version) {
+                throw new Error('Невірний формат файлу');
+            }
+            
+            if (!confirm('Це видалить всі поточні маркери, світла та стіни. Продовжити?')) {
+                event.target.value = '';
+                return;
+            }
+            
+            // Видалення існуючих елементів
+            Object.keys(deviceData).forEach(markerId => {
+                if (!defaultDevices[markerId]) {
+                    const element = document.getElementById(markerId);
+                    if (element) element.remove();
+                }
+            });
+            
+            Object.values(lightDevices).forEach(light => {
+                if (light.element) {
+                    light.element.remove();
+                }
+            });
+            
+            Object.keys(wallData).forEach(wallId => {
+                const element = document.getElementById(wallId);
+                if (element) element.remove();
+            });
+            
+            // Очищення даних
+            deviceData = {...defaultDevices};
+            lightDevices = {};
+            wallData = {};
+            
+            // Завантаження нових даних
+            markerCounter = importData.markerCounter || 1;
+            lightCounter = importData.lightCounter || 1;
+            wallCounter = importData.wallCounter || 1;
+            
+            if (importData.globalBrightness !== undefined) {
+                updateBrightness(importData.globalBrightness);
+            }
+            
+            // Завантаження пристроїв
+            if (importData.devices) {
+                Object.entries(importData.devices).forEach(([markerId, device]) => {
+                    if (!defaultDevices[markerId]) {
+                        deviceData[markerId] = device;
+                        createMarkerFromData(markerId, device);
+                    }
+                });
+            }
+            
+            // Завантаження світла
+            if (importData.lights) {
+                Object.entries(importData.lights).forEach(([lightId, lightData]) => {
+                    if (!lightData.isMarker) {
+                        createLightFromData(lightId, lightData);
+                    }
+                });
+            }
+            
+            // Завантаження стін
+            if (importData.walls) {
+                Object.entries(importData.walls).forEach(([wallId, wallDat]) => {
+                    wallData[wallId] = wallDat;
+                    createWallFromData(wallDat);
+                });
+            }
+            
+            updateStats();
+            
+            const summary = `✅ Імпортовано:\n` +
+                `- ${Object.keys(deviceData).length - Object.keys(defaultDevices).length} маркерів\n` +
+                `- ${Object.keys(lightDevices).length} світлових пристроїв\n` +
+                `- ${Object.keys(wallData).length} стін`;
+            
+            console.log(summary);
+            showNotification('Дані успішно імпортовано!', 'success');
+            
+        } catch (error) {
+            console.error('❌ Помилка імпорту:', error);
+            showNotification('Помилка при імпорті файлу: ' + error.message, 'error');
+        }
     };
     
-    console.log(`🧱 Створено стіну ${wallId}`);
-}
-
-function toggleWallVisibility() {
-    const walls = document.querySelectorAll('.collision-wall');
-    walls.forEach(wall => {
-        const opacity = wall.getAttribute('material').opacity;
-        wall.setAttribute('material', `opacity: ${opacity === '0.8' ? '0.2' : '0.8'}`);
-    });
-}
-
-    const exportData = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        devices: cleanDeviceData,
-        lights: cleanLightDevices,
-        markerCounter: markerCounter,
-        lightCounter: lightCounter,
-        globalBrightness: globalBrightness
+    reader.onerror = function() {
+        showNotification('Помилка читання файлу', 'error');
     };
     
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `smart-home-iot-markers-${Date.now()}.json`;
-    link.click();
-    
-    console.log('✅ Експортовано', Object.keys(deviceData).length, 'маркерів та', Object.keys(lightDevices).length, 'світлових пристроїв');
+    reader.readAsText(file);
+    event.target.value = '';
 }
 
-// Імпорт маркерів
-// Імпорт маркерів
-
-
-// Створення світла з даних
-function createLightFromData(lightId, lightData) {
-    const lightEntity = document.createElement('a-entity');
-    lightEntity.setAttribute('id', lightId);
-    lightEntity.setAttribute('position', `${lightData.position.x} ${lightData.position.y} ${lightData.position.z}`);
-    
-    // Точкове світло
-    const pointLight = document.createElement('a-light');
-    pointLight.setAttribute('type', 'point');
-    pointLight.setAttribute('color', '#ffeb3b');
-    pointLight.setAttribute('intensity', lightData.isOn ? lightData.brightness / 100 : 0);
-    pointLight.setAttribute('distance', '20');
-    pointLight.setAttribute('decay', '2');
-    
-    // Візуальна лампочка
-    const bulb = document.createElement('a-sphere');
-    bulb.setAttribute('radius', '0.3');
-    bulb.setAttribute('color', '#ffeb3b');
-    bulb.setAttribute('emissive', '#ffeb3b');
-    bulb.setAttribute('emissiveIntensity', lightData.isOn ? lightData.brightness / 100 : 0);
-    bulb.setAttribute('opacity', lightData.isOn ? '0.8' : '0.3');
-    
-    // Текст
-    const text = document.createElement('a-text');
-    text.setAttribute('value', lightData.name);
-    text.setAttribute('position', '0 0.8 0');
-    text.setAttribute('width', '3');
-    text.setAttribute('align', 'center');
-    text.setAttribute('color', '#fff');
-    text.setAttribute('font', '../fonts/calibri-msdf.json');
-    
-    lightEntity.appendChild(pointLight);
-    lightEntity.appendChild(bulb);
-    lightEntity.appendChild(text);
-    
-    document.querySelector('a-scene').appendChild(lightEntity);
-    
-    // Зберігаємо дані
-    lightDevices[lightId] = {
-        ...lightData,
-        element: lightEntity
-    };
-}
-
-function createWallFromData(wallData) {
-    const wall = document.createElement('a-box');
-    wall.setAttribute('id', wallData.id);
-    wall.setAttribute('position', `${wallData.position.x} ${wallData.position.y} ${wallData.position.z}`);
-    wall.setAttribute('width', wallData.width);
-    wall.setAttribute('height', wallData.height);
-    wall.setAttribute('depth', '0.3');
-    wall.setAttribute('rotation', `0 ${wallData.rotation} 0`);
-    wall.setAttribute('material', 'color: #8B4513; opacity: 0.8');
-    wall.setAttribute('static-body', '');
-    wall.setAttribute('class', 'collision-wall');
-    
-    document.querySelector('a-scene').appendChild(wall);
-}
-// Функція для показу повідомлень
-function showNotification(message, type = 'info') {
-    // Видаляємо старе повідомлення якщо є
-    const oldNotification = document.getElementById('notification');
-    if (oldNotification) {
-        oldNotification.remove();
-    }
-    
-    // Створюємо нове повідомлення
-    const notification = document.createElement('div');
-    notification.id = 'notification';
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Анімація появи
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Автоматичне зникнення
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Функція для експорту тільки стін
 function exportWallsOnly() {
     const cleanWallData = {};
     Object.entries(wallData).forEach(([id, wall]) => {
@@ -982,125 +1094,21 @@ function exportWallsOnly() {
     console.log('✅ Експортовано', Object.keys(wallData).length, 'стін');
     showNotification(`Експортовано ${Object.keys(wallData).length} стін`, 'success');
 }
-// Створення маркера з даних
-function createMarkerFromData(markerId, device) {
-    const container = document.createElement('a-entity');
-    container.setAttribute('id', markerId);
-    container.setAttribute('position', `${device.position.x} ${device.position.y} ${device.position.z}`);
-    
-    // Визначаємо колір на основі ML типу
-    let markerColor = '#00ff88';
-    if (device.mlType && edgeMLTypes[device.mlType]) {
-        markerColor = edgeMLTypes[device.mlType].color;
-    }
-    
-    // Сфера маркера
-    const marker = document.createElement('a-sphere');
-    marker.setAttribute('class', 'iot-marker');
-    marker.setAttribute('radius', '0.5');
-    marker.setAttribute('color', markerColor);
-    marker.setAttribute('opacity', '0.7');
-    marker.setAttribute('event-set__enter', '_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9');
-    marker.setAttribute('event-set__leave', '_event: mouseleave; scale: 1 1 1; opacity: 0.7');
-    marker.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 15000');
-    
-    // Додаємо ефект пульсації для ML пристроїв
-    if (device.mlType) {
-        marker.setAttribute('animation__pulse', 'property: scale; from: 1 1 1; to: 1.1 1.1 1.1; loop: true; dir: alternate; dur: 2000');
-    }
-    
-    // Текст над маркером
-    const text = document.createElement('a-text');
-    text.setAttribute('value', device.name);
-    text.setAttribute('position', '0 1 0');
-    text.setAttribute('width', '4');
-    text.setAttribute('align', 'center');
-    text.setAttribute('color', '#fff');
-    text.setAttribute('font', '../fonts/calibri-msdf.json');
-    
-    // Додаємо іконку ML якщо це ML пристрій
-    if (device.mlType) {
-        const mlIcon = document.createElement('a-text');
-        mlIcon.setAttribute('value', '🤖');
-        mlIcon.setAttribute('position', '0 1.5 0');
-        mlIcon.setAttribute('width', '6');
-        mlIcon.setAttribute('align', 'center');
-        container.appendChild(mlIcon);
-    }
-    
-    // Якщо це світловий пристрій
-    if (device.mlType === 'light') {
-        const lightId = `device-light-${markerId.split('-')[1]}`;
-        const pointLight = document.createElement('a-light');
-        pointLight.setAttribute('type', 'point');
-        pointLight.setAttribute('color', '#ffeb3b');
-        pointLight.setAttribute('intensity', '0.5');
-        pointLight.setAttribute('distance', '15');
-        pointLight.setAttribute('decay', '2');
-        container.appendChild(pointLight);
-        
-        // Відновлюємо світловий пристрій
-        const existingLight = Object.values(lightDevices).find(l => l.name === device.name && l.isMarker);
-        if (!existingLight) {
-            lightDevices[lightId] = {
-                id: lightId,
-                name: device.name,
-                position: device.position,
-                isOn: true,
-                brightness: 50,
-                element: container,
-                isMarker: true
-            };
-        }
-    }
-    
-    container.appendChild(marker);
-    container.appendChild(text);
-    document.querySelector('a-scene').appendChild(container);
-    
-    // Додаємо обробник кліку
-    marker.addEventListener('click', function() {
-        showIotInfo(markerId);
-    });
-}
-
-// Швидкі дії
-function resetPosition() {
-    document.getElementById('rig').setAttribute('position', '0 10 20');
-    document.getElementById('height-input').value = 10;
-    document.getElementById('current-height').textContent = 10;
-}
-
-function toggleMarkers() {
-    markersVisible = !markersVisible;
-    const markers = document.querySelectorAll('.iot-marker');
-    markers.forEach(marker => {
-        marker.setAttribute('visible', markersVisible);
-    });
-}
-
-// Оновлення позиції
-function updatePositionDisplay() {
-    const camera = document.getElementById('camera');
-    const pos = camera.object3D.getWorldPosition(new THREE.Vector3());
-    document.getElementById('pos-x').textContent = pos.x.toFixed(1);
-    document.getElementById('pos-y').textContent = pos.y.toFixed(1);
-    document.getElementById('pos-z').textContent = pos.z.toFixed(1);
-}
 
 // Ініціалізація
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Smart Home XR Tour завантажено');
     setHeight();
     
-    // Оновлення позиції кожні 100мс
     setInterval(updatePositionDisplay, 100);
+    setInterval(updateStats, 1000);
+    
     setInterval(() => {
         if (isPlacingWall) {
             updateWallPreview();
         }
     }, 50);
-    // Обробник для початкового маркера
+    
     const initialMarker = document.querySelector('#marker-0-0-0 .iot-marker');
     if (initialMarker) {
         initialMarker.addEventListener('click', function() {
@@ -1108,7 +1116,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Обробка клавіш
     document.addEventListener('keydown', (e) => {
         switch(e.key.toLowerCase()) {
             case 'q':
@@ -1149,7 +1156,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Pointer lock
     document.addEventListener('click', () => {
         const canvas = document.querySelector('a-scene canvas');
         if (canvas && !document.pointerLockElement) {
@@ -1178,3 +1184,5 @@ window.updateBrightness = updateBrightness;
 window.toggleLightDevice = toggleLightDevice;
 window.startWallPlacement = startWallPlacement;
 window.toggleWallVisibility = toggleWallVisibility;
+window.exportWallsOnly = exportWallsOnly;
+window.showNotification = showNotification;
