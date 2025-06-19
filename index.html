@@ -119,6 +119,9 @@
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100" physics="debug: true; driver: local;">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
+            
+            <a-asset-item id="invisible-walls" src="outbound.glb"></a-asset-item>
+            
         </a-assets>
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
@@ -130,7 +133,10 @@
         <a-gltf-model src="#house-model" position="0 0 0" scale="1 1 1" rotation="0 0 0"
                       shadow="cast: true; receive: true" id="house">
         </a-gltf-model>
-
+        <a-entity gltf-model="#invisible-walls"
+                  visible="false"
+                  static-body="shape: mesh;">
+        </a-entity>
         <a-entity id="rig" position="0 10 20"
                   dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
             <a-entity id="camera"
