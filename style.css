@@ -15,6 +15,8 @@ body {
     border-radius: 10px;
     font-size: 14px;
     max-width: 300px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 #controls-panel button {
@@ -26,10 +28,12 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-size: 13px;
+    transition: all 0.3s;
 }
 
 #controls-panel button:hover {
     background: #0097a7;
+    transform: scale(1.05);
 }
 
 #controls-panel input {
@@ -51,58 +55,6 @@ body {
 
 .brightness-control label {
     font-size: 13px;
-    font-weight: bold;
-}
-
-/* Повідомлення */
-.notification {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 20px 30px;
-    border-radius: 10px;
-    font-size: 16px;
-    z-index: 10000;
-    opacity: 0;
-    transition: opacity 0.3s;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    max-width: 400px;
-    text-align: center;
-}
-
-.notification.show {
-    opacity: 1;
-}
-
-.notification.success {
-    background: rgba(76, 175, 80, 0.9);
-    border: 2px solid #4CAF50;
-}
-
-.notification.error {
-    background: rgba(244, 67, 54, 0.9);
-    border: 2px solid #f44336;
-}
-
-.notification.info {
-    background: rgba(33, 150, 243, 0.9);
-    border: 2px solid #2196F3;
-}
-
-/* Статистика експорту/імпорту */
-.export-stats {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
-    font-size: 12px;
-}
-
-.export-stats span {
-    color: #00bcd4;
     font-weight: bold;
 }
 
@@ -245,6 +197,7 @@ body {
     width: 48%;
 }
 
+/* Стилі для голосового керування */
 #voice-control {
     position: absolute;
     bottom: 20px;
@@ -289,11 +242,9 @@ body {
     0% {
         box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.7);
     }
-
     70% {
         box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
     }
-
     100% {
         box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
     }
@@ -341,4 +292,116 @@ body {
     font-size: 11px;
     opacity: 0.7;
     line-height: 1.3;
+}
+
+/* Стилі для стін */
+.collision-wall {
+    cursor: pointer;
+}
+
+.collision-wall:hover {
+    opacity: 1 !important;
+}
+
+#wall-status {
+    min-height: 20px;
+    padding: 5px;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 3px;
+    text-align: center;
+}
+
+/* Повідомлення */
+.notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    font-size: 16px;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    max-width: 400px;
+    text-align: center;
+}
+
+.notification.show {
+    opacity: 1;
+}
+
+.notification.success {
+    background: rgba(76, 175, 80, 0.9);
+    border: 2px solid #4CAF50;
+}
+
+.notification.error {
+    background: rgba(244, 67, 54, 0.9);
+    border: 2px solid #f44336;
+}
+
+.notification.info {
+    background: rgba(33, 150, 243, 0.9);
+    border: 2px solid #2196F3;
+}
+
+/* Статистика експорту/імпорту */
+.export-stats {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.export-stats span {
+    color: #00bcd4;
+    font-weight: bold;
+}
+
+/* Скролбар для панелі керування */
+#controls-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+#controls-panel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+#controls-panel::-webkit-scrollbar-thumb {
+    background: rgba(0, 188, 212, 0.5);
+    border-radius: 4px;
+}
+
+#controls-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 188, 212, 0.8);
+}
+
+/* Адаптивність */
+@media (max-width: 768px) {
+    #controls-panel {
+        font-size: 12px;
+        max-width: 250px;
+        padding: 10px;
+    }
+    
+    #voice-control {
+        max-width: 250px;
+        padding: 10px;
+    }
+    
+    #voice-control button {
+        padding: 8px 15px;
+        font-size: 12px;
+    }
+    
+    #iot-info-panel {
+        max-width: 280px;
+        font-size: 12px;
+    }
 }
