@@ -5,7 +5,8 @@
     <title>Smart Home XR Tour</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <!-- Використовуємо версію 1.5.0, яка є стабільною з багатьма компонентами aframe-extras -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
@@ -14,16 +15,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Панель керування залишається без змін -->
     <div id="controls-panel">
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
             <button onclick="changeHeight(-1)">↓</button>
-            <input type="number" id="height-input" value="10" min="0" max="50">
+            <input type="number" id="height-input" value="1.6" step="0.1" min="0" max="50">
             <button onclick="changeHeight(1)">↑</button>
             <button onclick="setHeight()">Встановити</button><br>
-            <small>Поточна висота: <span id="current-height">10</span>м</small>
+            <small>Поточна висота: <span id="current-height">1.6</span>м</small>
         </div>
-
         <div class="control-group">
             <strong>💡 Керування світлом:</strong><br>
             <button onclick="createLight()">➕ Створити світло</button>
@@ -34,15 +35,17 @@
                 <span id="brightness-value">50%</span>
             </div>
         </div>
-        
-        <div class="control-group">
+        <!-- 
+            Ми приховуємо цю панель, оскільки тепер у нас є статичні стіни з моделі outbound.glb.
+            Дві системи стін будуть конфліктувати.
+        -->
+        <div class="control-group" style="display: none;">
             <strong>🧱 Створення стін:</strong><br>
             <button id="start-wall-btn" onclick="startWallCreation()">Почати стіну</button>
             <button id="create-wall-btn" onclick="createWall()" disabled>Завершити стіну</button>
             <button id="cancel-wall-btn" onclick="cancelWallCreation()" disabled>Скасувати</button>
             <small id="wall-status">Встановіть початкову точку.</small>
         </div>
-
         <div class="control-group">
             <strong>📍 Створення маркерів:</strong><br>
             <button onclick="createMarkerAtCurrentPosition()">Створити маркер тут</button>
@@ -62,13 +65,11 @@
                 <button onclick="cancelMarker()">❌ Скасувати</button>
             </div>
         </div>
-
         <div class="control-group">
             <strong>🏠 Швидкі дії:</strong><br>
             <button onclick="resetPosition()">↩️ На початок</button>
             <button onclick="toggleMarkers()">👁️ Показати/Сховати</button>
         </div>
-
         <div class="control-group">
             <strong>💾 Експорт/Імпорт:</strong><br>
             <button onclick="exportData()">📥 Експортувати все</button>
@@ -76,14 +77,12 @@
             <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
         </div>
     </div>
-
     <div id="position-info">
         <strong>Позиція:</strong><br>
         X: <span id="pos-x">0</span><br>
         Y: <span id="pos-y">10</span><br>
         Z: <span id="pos-z">20</span>
     </div>
-
     <div id="iot-info-panel">
         <h3 id="iot-title">IoT Пристрій</h3>
         <p><span class="info-label">Тип:</span> <span id="iot-type">-</span></p>
@@ -99,7 +98,6 @@
         </div>
         <button onclick="closeIotPanel()">Закрити</button>
     </div>
-
     <div id="voice-control">
         <h3>🎤 Голосове керування</h3>
         <button id="voice-btn" onclick="toggleVoiceRecognition()">
@@ -116,12 +114,11 @@
         <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
     </div>
 
+    <!-- Налаштування сцени з фізикою -->
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100" physics="debug: true; driver: local;">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
-            
             <a-asset-item id="invisible-walls" src="outbound.glb"></a-asset-item>
-            
         </a-assets>
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
@@ -130,20 +127,29 @@
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
                  color="#4a5d4a" shadow="receive: true" static-body></a-plane>
 
+        <!-- Видима модель будинку -->
         <a-gltf-model src="#house-model" position="0 0 0" scale="1 1 1" rotation="0 0 0"
                       shadow="cast: true; receive: true" id="house">
         </a-gltf-model>
+        
+        <!-- НЕВИДИМІ СТІНИ З ФІЗИКОЮ -->
         <a-entity gltf-model="#invisible-walls"
                   visible="false"
                   static-body="shape: mesh;">
         </a-entity>
-        <a-entity id="rig" position="0 10 20"
+        
+        <!-- 
+          КРИТИЧНІ ЗМІНИ ТУТ 
+          1. wasd-controls перенесено з камери сюди, на #rig.
+          2. Початкова позиція гравця встановлена на рівні землі (y=0)
+        -->
+        <a-entity id="rig" position="0 0 10"
+                  wasd-controls="acceleration: 25;"
                   dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
             <a-entity id="camera"
                       camera
                       look-controls="pointerLockEnabled: true"
-                      wasd-controls="acceleration: 25; fly: false"
-                      position="0 0 0">
+                      position="0 1.6 0"> <!-- ВИДАЛЕНО wasd-controls та встановлено позицію камери на рівні очей -->
                 <a-cursor fuse="false"
                           raycaster="objects: .iot-marker"
                           material="color: #00ff88; shader: flat">
@@ -151,20 +157,14 @@
             </a-entity>
         </a-entity>
 
+        <!-- Початковий маркер залишається без змін -->
         <a-entity id="marker-0-0-0" position="0 0 0">
-            <a-sphere class="iot-marker"
-                      radius="0.5"
-                      color="#00bcd4"
-                      opacity="0.7"
+            <a-sphere class="iot-marker" radius="0.5" color="#00bcd4" opacity="0.7"
                       event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9"
                       event-set__leave="_event: mouseleave; scale: 1 1 1; opacity: 0.7"
                       animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
             </a-sphere>
-            <a-text value="Розумний хаб"
-                    position="0 1 0"
-                    width="4"
-                    align="center"
-                    color="#fff"
+            <a-text value="Розумний хаб" position="0 1 0" width="4" align="center" color="#fff"
                     font="../fonts/calibri-msdf.json">
             </a-text>
         </a-entity>
