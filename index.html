@@ -2,9 +2,10 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Home XR Tour with NavMesh</title>
+    <title>Smart Home Tour with Physics</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
+    <!-- Використовуємо стабільну версію A-Frame 1.5.0 з aframe-extras -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
     
@@ -14,7 +15,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Весь HTML-інтерфейс (панелі) залишається без змін -->
+    <!-- Весь інтерфейс залишається без змін -->
     <div id="controls-panel">
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
@@ -109,40 +110,37 @@
         <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
     </div>
 
-    <!-- Сцена БЕЗ фізики, але з NavMesh -->
-    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
+    <!-- Сцена з правильно налаштованою ФІЗИКОЮ -->
+    <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100" physics="debug: true; driver: local;">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
-            <!-- Перейменовуємо асет для ясності. Тепер це навігаційна модель -->
-            <a-asset-item id="navmesh-asset" src="outbound.glb"></a-asset-item>
+            <!-- Асет для моделі фізичних стін -->
+            <a-asset-item id="collision-walls-asset" src="outbound.glb"></a-asset-item>
         </a-assets>
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
         <a-light type="directional" position="20 40 20" intensity="0.8" castShadow="true"></a-light>
         
-        <!-- Підлога тепер є лише візуальним елементом, без фізики -->
+        <!-- Підлога з фізичним тілом -->
         <a-plane position="0 0 0" rotation="-90 0 0" width="200" height="200"
-                 color="#4a5d4a" shadow="receive: true"></a-plane>
+                 color="#4a5d4a" shadow="receive: true" static-body></a-plane>
 
+        <!-- Видима модель будинку (без фізики, щоб не заважати) -->
         <a-gltf-model src="#house-model" shadow="cast: true; receive: true" id="house"></a-gltf-model>
         
-        <!-- 
-          === NAVMESH ===
-          Це "карта" для переміщення. Вона зроблена видимою і червоною, щоб ви бачили,
-          де гравець може ходити. В ідеалі, це має бути модель ПІДЛОГИ, а не стін.
-        -->
+        <!-- НЕВИДИМІ СТІНИ З ФІЗИЧНИМ ТІЛОМ -->
         <a-entity
-          nav-mesh
-          gltf-model="#navmesh-asset"
-          material="color: red; opacity: 0.5;"
-          visible="true">
+          gltf-model="#collision-walls-asset"
+          visible="false"
+          static-body="shape: mesh;">
         </a-entity>
         
-        <!-- 
-          === ГРАВЕЦЬ З ПРИВ'ЯЗКОЮ ДО NAVMESH ===
+        <!--
+          === ГРАВЕЦЬ З ПРАВИЛЬНОЮ ФІЗИКОЮ ТА КЕРУВАННЯМ ===
         -->
-        <a-entity id="rig" position="0 0 10"
-                  movement-controls="constrainToNavMesh: true;">
+        <a-entity id="rig" position="0 0.5 10"
+                  movement-controls="speed: 0.15;"
+                  dynamic-body="shape: capsule; mass: 5; height: 1.6; radius: 0.4;">
             <a-entity id="camera"
                       camera
                       position="0 1.6 0"
@@ -150,25 +148,6 @@
                 <a-cursor></a-cursor>
             </a-entity>
         </a-entity>
-        
-        <!-- 
-            === ТОЧКИ ТЕЛЕПОРТАЦІЇ (CHECKPOINTS) ===
-            Клік по ним буде телепортувати гравця.
-            Використовуємо примітив як тимчасову заміну для моделі "gem".
-        -->
-        <a-dodecahedron
-            checkpoint
-            radius="0.5"
-            color="#FFD700"
-            position="-5 1.6 5">
-        </a-dodecahedron>
-        <a-dodecahedron
-            checkpoint
-            radius="0.5"
-            color="#FFD700"
-            position="5 1.6 5">
-        </a-dodecahedron>
-
 
         <!-- Початковий маркер залишається без змін -->
         <a-entity id="marker-0-0-0" position="0 0 0">
