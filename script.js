@@ -17,6 +17,18 @@ let isCreatingWall = false;
 let wallCounter = 1;
 let wallData = []; // Для збереження даних про стіни
 
+// НОВЕ: Карта кольорів для голосових команд
+const voiceColorMap = {
+    'червоний': '#ff4d4d',
+    'зелений': '#52ff65',
+    'синій': '#4d94ff',
+    'білий': '#ffffff',
+    'жовтий': '#ffeb3b',
+    'оранжевий': '#ffab4d',
+    'фіолетовий': '#a45eff',
+    'бірюзовий': '#4ecdc4'
+};
+
 // Голосові команди
 const voiceCommands = {
     'створити маркер': () => createMarkerAtCurrentPosition(),
@@ -48,18 +60,11 @@ const voiceCommands = {
     'увімкнути все': () => setAllLights(true),
     'максимальна яскравість': () => updateBrightness(100),
     'мінімальна яскравість': () => updateBrightness(0),
-    'середня яскравість': () => updateBrightness(50),
-    'червоне світло': () => changeLightColor('red'),
-    'зелене світло': () => changeLightColor('green'),
-    'синє світло': () => changeLightColor('blue'),
-    'жовте світло': () => changeLightColor('yellow'),
-    'біле світло': () => changeLightColor('white'),
-    'помаранчеве світло': () => changeLightColor('orange'),
-    'фіолетове світло': () => changeLightColor('purple'),
-    'рожеве світло': () => changeLightColor('pink'),
-    'блакитне світло': () => changeLightColor('skyblue')
+    'середня яскравість': () => updateBrightness(50)
 };
 
+// ... (Весь код для Voice Recognition, ML, IoT пристроїв залишається тут без змін) ...
+// Ініціалізація Web Speech API
 function initVoiceRecognition() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         console.error('❌ Web Speech API не підтримується в цьому браузері');
@@ -132,9 +137,11 @@ function initVoiceRecognition() {
 
     return true;
 }
+// ОНОВЛЕНО: Обробник команд для розпізнавання кольору
 function processVoiceCommand(command) {
     console.log('🎯 Обробка команди:', command);
-    
+
+    // 1. Перевірка на зміну яскравості
     const brightnessMatch = command.match(/яскравість\s*(\d+)/);
     if (brightnessMatch) {
         const brightness = Math.min(100, Math.max(0, parseInt(brightnessMatch[1])));
@@ -143,6 +150,16 @@ function processVoiceCommand(command) {
         return;
     }
     
+    // 2. НОВЕ: Перевірка на зміну кольору
+    for (const [colorName, colorValue] of Object.entries(voiceColorMap)) {
+        if (command.includes(colorName)) {
+            setAllLightsColor(colorValue);
+            document.getElementById('voice-status-text').textContent = `Колір змінено на ${colorName}`;
+            return;
+        }
+    }
+
+    // 3. Перевірка на інші команди
     for (const [key, action] of Object.entries(voiceCommands)) {
         if (command.includes(key)) {
             console.log('✅ Виконую команду:', key);
@@ -371,6 +388,26 @@ function updateLightState(light) {
     bulb.setAttribute('emissiveIntensity', light.isOn ? light.brightness / 100 : '0');
     bulb.setAttribute('opacity', light.isOn ? '0.8' : '0.3');
 }
+
+// НОВА ФУНКЦІЯ
+function setAllLightsColor(color) {
+    console.log(`🎨 Зміна кольору всіх джерел світла на: ${color}`);
+    Object.values(lightDevices).forEach(light => {
+        const pointLight = light.element.querySelector('a-light');
+        const bulb = light.element.querySelector('a-sphere');
+
+        if (pointLight) {
+            pointLight.setAttribute('color', color);
+        }
+        if (bulb) {
+            bulb.setAttribute('color', color);
+            bulb.setAttribute('emissive', color); // Важливо для візуального ефекту "світіння"
+        }
+        // Опціонально: зберегти колір у стані, якщо потрібно для експорту
+        light.color = color;
+    });
+}
+
 let currentLightDevice = null;
 function toggleLightDevice() {
     if (currentLightDevice) {
@@ -455,7 +492,39 @@ function closeIotPanel() {
     document.getElementById('iot-info-panel').classList.remove('active');
 }
 
-// ВИПРАВЛЕНО: Експорт та Імпорт
+// НОВА ФУНКЦІЯ: Завантаження сцени з об'єкта
+function loadSceneFromData(importObject) {
+    // Повне очищення сцени перед імпортом
+    Object.keys(deviceData).forEach(id => { if (!defaultDevices[id]) document.getElementById(id)?.remove(); });
+    Object.keys(lightDevices).forEach(id => document.getElementById(id)?.remove());
+    document.querySelectorAll('.dynamic-wall').forEach(wall => wall.remove());
+
+    deviceData = { ...defaultDevices, ...importObject.devices };
+    lightDevices = {};
+    wallData = [];
+
+    markerCounter = importObject.markerCounter || 1;
+    lightCounter = importObject.lightCounter || 1;
+    wallCounter = importObject.wallCounter || 1;
+
+    if (importObject.globalBrightness !== undefined) {
+        updateBrightness(importObject.globalBrightness);
+    }
+
+    // Відновлення об'єктів
+    Object.entries(importObject.devices || {}).forEach(([id, data]) => {
+        if (!defaultDevices[id]) createMarkerFromData(id, data);
+    });
+    Object.entries(importObject.lights || {}).forEach(([id, data]) => createLightFromData(id, data));
+    (importObject.walls || []).forEach(data => createWallFromData(data));
+
+    // Оновлення масивів даних
+    wallData = importObject.walls || [];
+
+    console.log('✅ Сцену завантажено з даних!');
+}
+
+// ОНОВЛЕНО: Експорт та Імпорт
 function exportData() {
     // Створюємо "чисту" копію даних про світло без посилань на DOM елементи
     const cleanLightDevices = {};
@@ -498,35 +567,8 @@ function importData(event) {
     reader.onload = function(e) {
         try {
             const importObject = JSON.parse(e.target.result);
-            
-            // Повне очищення сцени перед імпортом
-            Object.keys(deviceData).forEach(id => { if (!defaultDevices[id]) document.getElementById(id)?.remove(); });
-            Object.keys(lightDevices).forEach(id => document.getElementById(id)?.remove());
-            document.querySelectorAll('.dynamic-wall').forEach(wall => wall.remove());
-            
-            deviceData = {...defaultDevices, ...importObject.devices};
-            lightDevices = {};
-            wallData = [];
-
-            markerCounter = importObject.markerCounter || 1;
-            lightCounter = importObject.lightCounter || 1;
-            wallCounter = importObject.wallCounter || 1;
-            
-            if (importObject.globalBrightness !== undefined) {
-                updateBrightness(importObject.globalBrightness);
-            }
-
-            // Відновлення об'єктів
-            Object.entries(importObject.devices || {}).forEach(([id, data]) => createMarkerFromData(id, data));
-            Object.entries(importObject.lights || {}).forEach(([id, data]) => createLightFromData(id, data));
-            (importObject.walls || []).forEach(data => createWallFromData(data));
-            
-            // Оновлення масивів даних
-            wallData = importObject.walls || [];
-
-            console.log('✅ Імпорт успішний!');
+            loadSceneFromData(importObject); // Використовуємо нову функцію
             alert('Дані успішно імпортовано!');
-            
         } catch (error) {
             console.error('❌ Помилка імпорту:', error);
             alert('Помилка при імпорті файлу.');
@@ -542,11 +584,22 @@ function createLightFromData(lightId, lightData) {
     lightEntity.setAttribute('position', `${lightData.position.x} ${lightData.position.y} ${lightData.position.z}`);
     const pointLight = document.createElement('a-light');
     pointLight.setAttribute('type', 'point');
+    // Встановлюємо колір з даних, або жовтий за замовчуванням
+    const color = lightData.color || '#ffeb3b';
+    pointLight.setAttribute('color', color);
     pointLight.setAttribute('intensity', lightData.isOn ? lightData.brightness / 100 : 0);
     const bulb = document.createElement('a-sphere');
     bulb.setAttribute('radius', '0.3');
+    bulb.setAttribute('color', color);
+    bulb.setAttribute('emissive', color);
     const text = document.createElement('a-text');
     text.setAttribute('value', lightData.name);
+    text.setAttribute('position', '0 0.8 0');
+    text.setAttribute('width', '3');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
+
     lightEntity.appendChild(pointLight);
     lightEntity.appendChild(bulb);
     lightEntity.appendChild(text);
@@ -568,6 +621,10 @@ function createMarkerFromData(markerId, device) {
     const text = document.createElement('a-text');
     text.setAttribute('value', device.name);
     text.setAttribute('position', '0 1 0');
+    text.setAttribute('width', '4');
+    text.setAttribute('align', 'center');
+    text.setAttribute('color', '#fff');
+    text.setAttribute('font', '../fonts/calibri-msdf.json');
     container.appendChild(text);
     document.querySelector('a-scene').appendChild(container);
 }
@@ -575,14 +632,11 @@ function createMarkerFromData(markerId, device) {
 // Швидкі дії та ініціалізація
 function resetPosition() {
     const rig = document.getElementById('rig');
-    rig.setAttribute('position', '0 10 20');
-    // Скидаємо швидкість фізичного тіла, щоб уникнути "польоту"
-    rig.body.velocity.set(0, 0, 0);
-    rig.body.angularVelocity.set(0, 0, 0);
+    rig.setAttribute('position', '0 1.6 10'); // Виправлено стартову висоту
 }
 function toggleMarkers() {
     markersVisible = !markersVisible;
-    document.querySelectorAll('.iot-marker').forEach(m => m.setAttribute('visible', markersVisible));
+    document.querySelectorAll('.iot-marker, a-text').forEach(m => m.setAttribute('visible', markersVisible));
 }
 function updatePositionDisplay() {
     const pos = document.getElementById('camera').object3D.getWorldPosition(new THREE.Vector3());
@@ -591,6 +645,7 @@ function updatePositionDisplay() {
     document.getElementById('pos-z').textContent = pos.z.toFixed(1);
 }
 
+// ОНОВЛЕНО: Ініціалізація при завантаженні сторінки
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Smart Home XR Tour завантажено');
     setHeight();
@@ -607,6 +662,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('a-scene').addEventListener('click', () => {
         document.querySelector('a-scene').canvas.requestPointerLock();
     });
+
+    // НОВЕ: Автоматичне завантаження сцени
+    fetch('marker-light.json')
+        .then(response => {
+            if (response.ok) {
+                console.log('🗂️ Знайдено файл marker-light.json. Завантажую сцену...');
+                return response.json();
+            } else {
+                throw new Error('Файл не знайдено, буде використано сцену за замовчуванням.');
+            }
+        })
+        .then(data => {
+            loadSceneFromData(data);
+        })
+        .catch(error => {
+            console.warn(error.message);
+        });
 });
 
 // Глобальні функції
@@ -614,69 +686,5 @@ Object.assign(window, {
     changeHeight, setHeight, createMarkerAtCurrentPosition, saveMarker, cancelMarker,
     resetPosition, toggleMarkers, showIotInfo, closeIotPanel, exportData, importData,
     toggleVoiceRecognition, toggleMLMode, createLight, toggleAllLights, updateBrightness,
-    toggleLightDevice, startWallCreation, createWall, cancelWallCreation
+    toggleLightDevice, startWallCreation, createWall, cancelWallCreation, setAllLightsColor
 });
-window.addEventListener('DOMContentLoaded', () => {
-    fetch('marker-light.json')
-        .then(response => {
-            if (!response.ok) throw new Error('Файл marker-light.json не знайдено');
-            return response.json();
-        })
-        .then(data => {
-            console.log('Автоматичний імпорт marker-light.json…');
-            importDataFromJSON(data);
-        })
-        .catch(error => {
-            console.log('Автоматичний імпорт пропущено:', error.message);
-        });
-});
-
-// Стандартна функція імпорту
-function importDataFromJSON(json) {
-    if (Array.isArray(json.markers)) {
-        json.markers.forEach(marker => {
-            createMarkerFromData(marker);
-        });
-    }
-
-    if (json.lights) {
-        json.lights.forEach(light => {
-            createLightFromData(light);
-        });
-    }
-
-}
-
-function createMarkerFromData(data) {
-    const marker = document.createElement('a-entity');
-    marker.setAttribute('position', data.position);
-    marker.innerHTML = `
-        <a-sphere class="iot-marker" radius="0.5" color="${data.color || '#00bcd4'}" opacity="0.7"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
-        </a-sphere>
-        <a-text value="${data.name}" position="0 1 0" width="4" align="center" color="#fff"
-            font="../fonts/calibri-msdf.json">
-        </a-text>
-    `;
-    document.querySelector('a-scene').appendChild(marker);
-}
-
-function createLightFromData(data) {
-    const light = document.createElement('a-light');
-    light.setAttribute('type', data.type || 'point');
-    light.setAttribute('intensity', data.intensity || 1);
-    light.setAttribute('position', data.position || '0 2 0');
-    document.querySelector('a-scene').appendChild(light);
-}
-
-function changeLightColor(colorName) {
-    const lights = document.querySelectorAll('a-light');
-    lights.forEach(light => {
-        if (light.getAttribute('type') === 'point' || light.getAttribute('type') === 'spot') {
-            light.setAttribute('color', colorName);
-        }
-    });
-    console.log(`Колір світла змінено на ${colorName}`);
-}
-
-
