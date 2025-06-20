@@ -94,19 +94,17 @@
     </script>
 </head>
 <body>
-    <!-- Весь інтерфейс залишається без змін -->
     <div id="controls-panel">
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
             <button onclick="changeHeight(-1)">↓</button>
-            <input type="number" id="height-input" value="1.6" step="0.1" min="0" max="50">
+            <input type="number" id="height-input" value="6" step="0.1" min="0" max="50">
             <button onclick="changeHeight(1)">↑</button>
             <button onclick="setHeight()">Встановити</button><br>
-            <small>Поточна висота: <span id="current-height">1.6</span>м</small>
+            <small>Поточна висота: <span id="current-height">6</span>м</small>
         </div>
         <div class="control-group">
             <strong>💡 Керування світлом:</strong><br>
-            <button onclick="createLight()">➕ Створити світло</button>
             <button onclick="toggleAllLights()">💡 Увімк/Вимк всі</button>
             <div class="brightness-control">
                 <label>Яскравість:</label>
@@ -114,42 +112,54 @@
                 <span id="brightness-value">50%</span>
             </div>
         </div>
-        <div class="control-group" style="display: none;">
-            <strong>🧱 Створення стін:</strong><br>
-            <button id="start-wall-btn" onclick="startWallCreation()">Почати стіну</button>
-            <button id="create-wall-btn" onclick="createWall()" disabled>Завершити стіну</button>
-            <button id="cancel-wall-btn" onclick="cancelWallCreation()" disabled>Скасувати</button>
-            <small id="wall-status">Встановіть початкову точку.</small>
-        </div>
         <div class="control-group">
-            <strong>📍 Створення маркерів:</strong><br>
-            <button onclick="createMarkerAtCurrentPosition()">Створити маркер тут</button>
-            <div id="marker-form" style="display: none;">
-                <select id="ml-device-type" style="width: 100%; margin: 5px 0; padding: 5px;">
-                    <option value="">Стандартний IoT</option>
-                    <option value="vision">👁️ Computer Vision</option>
-                    <option value="audio">🔊 Аудіо ML</option>
-                    <option value="sensor">📊 Сенсорна аналітика</option>
-                    <option value="motion">🏃 Детектор руху</option>
-                    <option value="climate">🌡️ Клімат ML</option>
-                    <option value="light">💡 Розумне світло</option>
-                </select>
-                <input type="text" id="marker-name" placeholder="Назва пристрою">
-                <textarea id="marker-description" placeholder="Опис пристрою" rows="3"></textarea>
-                <button onclick="saveMarker()">✅ Зберегти</button>
-                <button onclick="cancelMarker()">❌ Скасувати</button>
+            <button id="toggle-editor-btn" onclick="toggleEditorMode()" style="width: 100%;">Показати інструменти редактора</button>
+        </div>
+
+        <div id="advanced-controls" style="display: none;">
+            <div class="control-group">
+                <strong>Інструменти створення:</strong><br>
+                <button onclick="createLight()">➕ Створити світло</button>
+                <button onclick="createMarkerAtCurrentPosition()">📍 Створити маркер тут</button>
             </div>
-        </div>
-        <div class="control-group">
-            <strong>🏠 Швидкі дії:</strong><br>
-            <button onclick="resetPosition()">↩️ На початок</button>
-            <button onclick="toggleMarkers()">👁️ Показати/Сховати</button>
-        </div>
-        <div class="control-group">
-            <strong>💾 Експорт/Імпорт:</strong><br>
-            <button onclick="exportData()">📥 Експортувати все</button>
-            <button onclick="document.getElementById('import-file').click()">📤 Імпортувати все</button>
-            <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+
+            <div class="control-group" style="display: none;"> <strong>🧱 Створення стін:</strong><br>
+                <button id="start-wall-btn" onclick="startWallCreation()">Почати стіну</button>
+                <button id="create-wall-btn" onclick="createWall()" disabled>Завершити стіну</button>
+                <button id="cancel-wall-btn" onclick="cancelWallCreation()" disabled>Скасувати</button>
+                <small id="wall-status">Встановіть початкову точку.</small>
+            </div>
+
+            <div class="control-group">
+                <div id="marker-form" style="display: none;">
+                    <strong>Налаштування маркера:</strong><br>
+                    <select id="ml-device-type" style="width: 100%; margin: 5px 0; padding: 5px;">
+                        <option value="">Стандартний IoT</option>
+                        <option value="vision">👁️ Computer Vision</option>
+                        <option value="audio">🔊 Аудіо ML</option>
+                        <option value="sensor">📊 Сенсорна аналітика</option>
+                        <option value="motion">🏃 Детектор руху</option>
+                        <option value="climate">🌡️ Клімат ML</option>
+                        <option value="light">💡 Розумне світло</option>
+                    </select>
+                    <input type="text" id="marker-name" placeholder="Назва пристрою">
+                    <textarea id="marker-description" placeholder="Опис пристрою" rows="3"></textarea>
+                    <button onclick="saveMarker()">✅ Зберегти</button>
+                    <button onclick="cancelMarker()">❌ Скасувати</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <strong>🏠 Швидкі дії:</strong><br>
+                <button onclick="resetPosition()">↩️ На початок</button>
+                <button onclick="toggleMarkers()">👁️ Показати/Сховати</button>
+            </div>
+            <div class="control-group">
+                <strong>💾 Експорт/Імпорт:</strong><br>
+                <button onclick="exportData()">📥 Експортувати все</button>
+                <button onclick="document.getElementById('import-file').click()">📤 Імпортувати все</button>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+            </div>
         </div>
     </div>
     <div id="position-info">
@@ -186,10 +196,9 @@
             <span id="voice-status-text">Готово до роботи</span>
             <div id="voice-transcript"></div>
         </div>
-        <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
+        <small>Команди: "створити маркер", "показати/сховати маркери", "на початок", "експорт", "створити світло", "увімкнути/вимкнути світло", "яскравість [число]", "зроби світло [колір]"</small>
     </div>
 
-    <!-- Сцена БЕЗ фізики -->
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
@@ -204,14 +213,12 @@
 
         <a-gltf-model src="#house-model" shadow="cast: true; receive: true" id="house"></a-gltf-model>
         
-        <!-- НЕВИДИМІ СТІНИ. Додано клас "collidable", щоб наш raycaster міг їх знайти -->
         <a-entity
           gltf-model="#collision-walls-asset"
           visible="false"
           class="collidable">
         </a-entity>
         
-        <!-- ГРАВЕЦЬ З НОВИМ КОМПОНЕНТОМ raycast-collider -->
         <a-entity id="rig" position="0 0.5 10"
                   movement-controls="speed: 0.15;"
                   raycast-collider="debug: true;">
@@ -229,13 +236,12 @@
                       event-set__leave="_event: mouseleave; scale: 1 1 1; opacity: 0.7"
                       animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
             </a-sphere>
-            <a-text value="Розумний хаб" position="0 1 0" width="4" align="center" color="#fff"
-                    font="../fonts/calibri-msdf.json">
+            <a-text value="Розумний хаб" position="-34.7 6.6 -16.90" width="4" align="center" color="#fff"
+                    font="../fonts/calibri-msdf.json" visible="false">
             </a-text>
         </a-entity>
     </a-scene>
 
-    <!-- Ваш існуючий script.js для маркерів, світла і т.д. -->
     <script src="script.js"></script>
 </body>
 </html>
