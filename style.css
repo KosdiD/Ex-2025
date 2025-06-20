@@ -298,6 +298,7 @@ body {
     line-height: 1.3;
 }
 
-body > *:not(#iot-info-panel):not(#voice-control) {
+body > *:not(#iot-info-panel):not(#voice-control):not(a-scene) {
     display: none !important;
 }
+
