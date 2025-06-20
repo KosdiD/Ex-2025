@@ -426,9 +426,14 @@ function changeHeight(direction) {
 function setHeight() {
     const height = document.getElementById('height-input').value;
     const rig = document.getElementById('rig');
-    const currentPos = rig.getAttribute('position');
-    rig.setAttribute('position', `${currentPos.x} ${height} ${currentPos.z}`);
+    const camera = document.getElementById('camera');
+
+    rig.setAttribute('simple-navmesh-constraint', 'height', height);
+
+    camera.setAttribute('position', 'y', height);
+
     document.getElementById('current-height').textContent = height;
+    console.log(`Висоту гравця встановлено на ${height}м`);
 }
 function createMarkerAtCurrentPosition() {
     const camera = document.getElementById('camera');
@@ -631,7 +636,7 @@ function createMarkerFromData(markerId, device) {
 
 function resetPosition() {
     const rig = document.getElementById('rig');
-    rig.setAttribute('position', '0 5.6 10'); 
+    rig.setAttribute('position', '0 6 10');
 }
 function toggleMarkers() {
     markersVisible = !markersVisible;
