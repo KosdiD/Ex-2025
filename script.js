@@ -226,7 +226,7 @@ function toggleMLMode() {
     if (useMLModel && !speechModel) initMLModel();
 }
 const defaultDevices = {
-    'marker-0-0-0': { name: 'Розумний хаб', type: 'Центральний контролер', description: 'Основний хаб для керування всіма IoT пристроями в квартирі', position: {x: 0, y: 0, z: 0}, mlFeatures: ['Центральна обробка ML моделей', 'Координація Edge пристроїв'] }
+    'marker-0-0-0': { name: 'Розумний хаб', type: 'Центральний контролер', description: 'Основний хаб для керування всіма IoT пристроями в квартирі', position: {x: 34.7, y: 6.6, z: -16.90}, mlFeatures: ['Центральна обробка ML моделей', 'Координація Edge пристроїв'] }
 };
 const edgeMLTypes = {
     vision: { name: 'Камера з Computer Vision', color: '#ff6b6b', mlModels: ['MobileNet', 'TinyYOLO', 'FaceNet'], features: ['Розпізнавання людей', 'Детекція жестів', 'Ідентифікація об\'єктів'] },
