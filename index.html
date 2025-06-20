@@ -94,7 +94,6 @@
     </script>
 </head>
 <body>
-    <!-- Весь інтерфейс залишається без змін -->
     <div id="controls-panel">
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
@@ -186,10 +185,9 @@
             <span id="voice-status-text">Готово до роботи</span>
             <div id="voice-transcript"></div>
         </div>
-        <small>Команди: "створити маркер", "показати маркери", "сховати маркери", "на початок", "експорт", "камера вгору/вниз", "створити світло", "вимкнути світло", "яскравість [число]"</small>
+        <small>Команди: "створити маркер", "показати/сховати маркери", "на початок", "експорт", "створити світло", "увімкнути/вимкнути світло", "яскравість [число]", "зроби світло [колір]"</small>
     </div>
 
-    <!-- Сцена БЕЗ фізики -->
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
@@ -204,14 +202,12 @@
 
         <a-gltf-model src="#house-model" shadow="cast: true; receive: true" id="house"></a-gltf-model>
         
-        <!-- НЕВИДИМІ СТІНИ. Додано клас "collidable", щоб наш raycaster міг їх знайти -->
         <a-entity
           gltf-model="#collision-walls-asset"
           visible="false"
           class="collidable">
         </a-entity>
         
-        <!-- ГРАВЕЦЬ З НОВИМ КОМПОНЕНТОМ raycast-collider -->
         <a-entity id="rig" position="0 0.5 10"
                   movement-controls="speed: 0.15;"
                   raycast-collider="debug: true;">
@@ -229,13 +225,12 @@
                       event-set__leave="_event: mouseleave; scale: 1 1 1; opacity: 0.7"
                       animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
             </a-sphere>
-            <a-text value="Розумний хаб" position="-34.68 6.6 -16.89" width="4" align="center" color="#fff"
-                    font="../fonts/calibri-msdf.json">
+            <a-text value="Розумний хаб" position="0 1 0" width="4" align="center" color="#fff"
+                    font="../fonts/calibri-msdf.json" visible="false">
             </a-text>
         </a-entity>
     </a-scene>
 
-    <!-- Ваш існуючий script.js для маркерів, світла і т.д. -->
     <script src="script.js"></script>
 </body>
 </html>
