@@ -2,8 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Home Tour with NavMesh Constraint</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Home Tour with NavMesh Constraint</title> <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.5.4/dist/aframe-extras.min.js"></script>
@@ -21,10 +20,10 @@
         <div class="control-group">
             <strong>🎮 Висота гравця:</strong><br>
             <button onclick="changeHeight(-1)">↓</button>
-            <input type="number" id="height-input" value="6" step="0.1" min="0" max="50">
+            <input type="number" id="height-input" value="1.6" step="0.1" min="0" max="50">
             <button onclick="changeHeight(1)">↑</button>
             <button onclick="setHeight()">Встановити</button><br>
-            <small>Поточна висота: <span id="current-height">6</span>м</small>
+            <small>Поточна висота: <span id="current-height">1.6</span>м</small>
         </div>
         <div class="control-group">
             <strong>💡 Керування світлом:</strong><br>
@@ -77,8 +76,8 @@
     <div id="position-info">
         <strong>Позиція:</strong><br>
         X: <span id="pos-x">0</span><br>
-        Y: <span id="pos-y">0</span><br>
-        Z: <span id="pos-z">0</span>
+        Y: <span id="pos-y">10</span><br>
+        Z: <span id="pos-z">20</span>
     </div>
     <div id="iot-info-panel">
         <h3 id="iot-title">IoT Пристрій</h3>
@@ -115,7 +114,9 @@
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
+            
             <a-asset-item id="navmesh-glb" src="navmesh.glb"></a-asset-item>
+
         </a-assets>
 
         <a-light type="ambient" intensity="0.6" id="ambient-light"></a-light>
@@ -128,18 +129,28 @@
         
         <a-gltf-model class="navmesh" src="#navmesh-glb" visible="false"></a-gltf-model>
 
-        <a-entity id="rig" position="0 6 10"
+        <a-entity id="rig" position="0 0.5 10"
                   movement-controls="speed: 0.15;"
-                  simple-navmesh-constraint="navmesh: .navmesh; height: 6;">
+                  simple-navmesh-constraint="navmesh: .navmesh; height: 1.6;">
             <a-entity id="camera"
                       camera
-                      position="0 6 0"
+                      position="0 1.6 0"
                       look-controls="pointerLockEnabled: true">
-                <a-cursor raycaster="objects: .iot-marker; far: 30;"></a-cursor>
+                <a-cursor></a-cursor>
             </a-entity>
         </a-entity>
-        
-        </a-scene>
+
+        <a-entity id="marker-0-0-0" position="0 0 0">
+            <a-sphere class="iot-marker" radius="0.5" color="#00bcd4" opacity="0.7"
+                      event-set__enter="_event: mouseenter; scale: 1.2 1.2 1.2; opacity: 0.9"
+                      event-set__leave="_event: mouseleave; scale: 1 1 1; opacity: 0.7"
+                      animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
+            </a-sphere>
+            <a-text value="Розумний хаб" position="-34.68 6.6 -16.89" width="4" align="center" color="#fff"
+                    font="../fonts/calibri-msdf.json">
+            </a-text>
+        </a-entity>
+    </a-scene>
 
     <script src="script.js"></script>
 </body>
