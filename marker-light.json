@@ -7,9 +7,9 @@
       "type": "Центральний контролер",
       "description": "Основний хаб для керування всіма IoT пристроями в квартирі",
       "position": {
-        "x": -34.7,
-        "y": 6.6,
-        "z": -16.90
+        "x": 0,
+        "y": 0,
+        "z": 0
       },
       "mlFeatures": [
         "Центральна обробка ML моделей",
@@ -393,20 +393,6 @@
       "mlModels": [],
       "mlFeatures": [],
       "isLight": false
-    },
-    "marker-22": {
-      "name": "WiFi роутер",
-      "type": "IoT Пристрій",
-      "description": "Центр розумного дому, має вискоу пропускну задтність для безперебійної роботи всіх компонентів.",
-      "position": {
-        "x": -34.7,
-        "y": 6.6,
-        "z": -16.90
-      },
-      "mlType": "",
-      "mlModels": [],
-      "mlFeatures": [],
-      "isLight": false
     }
   },
   "lights": {
@@ -458,16 +444,16 @@
       "id": "light-5",
       "name": "Світло 5",
       "position": {
-        "x": -54.49,
-        "y": 13.6,
-        "z": -4.7
+        "x": -27.49,
+        "y": 11.6,
+        "z": -30.94
       },
       "isOn": true,
       "brightness": 50
     }
   },
   "walls": [],
-  "markerCounter": 23,
+  "markerCounter": 22,
   "lightCounter": 6,
   "wallCounter": 1,
   "globalBrightness": 50
