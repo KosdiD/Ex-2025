@@ -629,10 +629,9 @@ function createMarkerFromData(markerId, device) {
     document.querySelector('a-scene').appendChild(container);
 }
 
-// Швидкі дії та ініціалізація
 function resetPosition() {
     const rig = document.getElementById('rig');
-    rig.setAttribute('position', '0 1.6 10'); // Виправлено стартову висоту
+    rig.setAttribute('position', '0 5.6 10'); 
 }
 function toggleMarkers() {
     markersVisible = !markersVisible;
@@ -645,7 +644,19 @@ function updatePositionDisplay() {
     document.getElementById('pos-z').textContent = pos.z.toFixed(1);
 }
 
-// ОНОВЛЕНО: Ініціалізація при завантаженні сторінки
+function toggleEditorMode() {
+    const advancedControls = document.getElementById('advanced-controls');
+    const toggleBtn = document.getElementById('toggle-editor-btn');
+
+    if (advancedControls.style.display === 'none') {
+        advancedControls.style.display = 'block';
+        toggleBtn.textContent = 'Сховати інструменти редактора';
+    } else {
+        advancedControls.style.display = 'none';
+        toggleBtn.textContent = 'Показати інструменти редактора';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Smart Home XR Tour завантажено');
     setHeight();
@@ -663,7 +674,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('a-scene').canvas.requestPointerLock();
     });
 
-    // НОВЕ: Автоматичне завантаження сцени
     fetch('marker-light.json')
         .then(response => {
             if (response.ok) {
@@ -686,5 +696,6 @@ Object.assign(window, {
     changeHeight, setHeight, createMarkerAtCurrentPosition, saveMarker, cancelMarker,
     resetPosition, toggleMarkers, showIotInfo, closeIotPanel, exportData, importData,
     toggleVoiceRecognition, toggleMLMode, createLight, toggleAllLights, updateBrightness,
-    toggleLightDevice, startWallCreation, createWall, cancelWallCreation, setAllLightsColor
+    toggleLightDevice, startWallCreation, createWall, cancelWallCreation, setAllLightsColor,
+    toggleEditorMode
 });
