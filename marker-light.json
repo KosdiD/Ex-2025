@@ -393,20 +393,6 @@
       "mlModels": [],
       "mlFeatures": [],
       "isLight": false
-    },
-    "marker-22": {
-      "name": "ГОЛОВА ",
-      "type": "IoT Пристрій",
-      "description": "ГОЛОВА",
-      "position": {
-        "x": -34.68121036377645,
-        "y": 6.6,
-        "z": -16.89375385443507
-      },
-      "mlType": "",
-      "mlModels": [],
-      "mlFeatures": [],
-      "isLight": false
     }
   },
   "lights": {
@@ -464,22 +450,11 @@
       },
       "isOn": true,
       "brightness": 50
-    },
-    "light-6": {
-      "id": "light-6",
-      "name": "Світло 6",
-      "position": {
-        "x": -15.73,
-        "y": 11.6,
-        "z": -5.71
-      },
-      "isOn": true,
-      "brightness": 50
     }
   },
   "walls": [],
-  "markerCounter": 23,
-  "lightCounter": 7,
+  "markerCounter": 22,
+  "lightCounter": 6,
   "wallCounter": 1,
   "globalBrightness": 50
 }
