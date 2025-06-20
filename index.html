@@ -74,6 +74,44 @@
             <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
         </div>
     </div>
+    <div id="position-info">
+        <strong>Позиція:</strong><br>
+        X: <span id="pos-x">0</span><br>
+        Y: <span id="pos-y">0</span><br>
+        Z: <span id="pos-z">0</span>
+    </div>
+    <div id="iot-info-panel">
+        <h3 id="iot-title">IoT Пристрій</h3>
+        <p><span class="info-label">Тип:</span> <span id="iot-type">-</span></p>
+        <p><span class="info-label">Опис:</span> <span id="iot-description">-</span></p>
+        <p><span class="info-label">ML Моделі:</span> <span id="iot-ml-models">-</span></p>
+        <p><span class="info-label">ML Функції:</span> <span id="iot-ml-features">-</span></p>
+        <p><span class="info-label">Статус:</span> <span id="iot-status">Активний</span></p>
+        <p><span class="info-label">Координати:</span> <span id="iot-coords">-</span></p>
+        <div id="light-controls" style="display: none;">
+            <p><span class="info-label">Стан світла:</span> <span id="light-state">Вимкнено</span></p>
+            <p><span class="info-label">Яскравість:</span> <span id="light-brightness">50%</span></p>
+            <button onclick="toggleLightDevice()">💡 Увімк/Вимк</button>
+        </div>
+        <button onclick="closeIotPanel()">Закрити</button>
+    </div>
+    <div id="voice-control">
+        <h3>🎤 Голосове керування</h3>
+        <button id="voice-btn" onclick="toggleVoiceRecognition()">
+            <span id="voice-btn-text">Почати розпізнавання</span>
+        </button>
+        <button onclick="toggleMLMode()">
+            <span id="ml-mode-text">ML: Вимк</span>
+        </button>
+        <div id="voice-status">
+            <span class="voice-indicator" id="voice-indicator"></span>
+            <span id="voice-status-text">Готово до роботи</span>
+            <div id="voice-transcript"></div>
+        </div>
+        <small>Команди: "створити маркер", "показати/сховати маркери", "на початок", "експорт", "створити світло", "увімкнути/вимкнути світло", "яскравість [число]", "зроби світло [колір]"</small>
+    </div>
+
+
     <a-scene background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 10; far: 100">
         <a-assets>
             <a-asset-item id="house-model" src="box.glb"></a-asset-item>
@@ -97,7 +135,7 @@
                       camera
                       position="0 6 0"
                       look-controls="pointerLockEnabled: true">
-                <a-cursor></a-cursor>
+                <a-cursor raycaster="objects: .iot-marker; far: 30;"></a-cursor>
             </a-entity>
         </a-entity>
         
